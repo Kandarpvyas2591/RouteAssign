@@ -11,16 +11,17 @@ import org.springframework.context.annotation.Configuration;
  * All values are loaded from application.properties under the prefix
  * {@code app.business} so they can be changed without recompiling.
  *
- * ┌────────────────────────────────────────────────────────────────────────────┐
- * │ Property key                                 │ Default  │ Section in spec  │
- * ├────────────────────────────────────────────────────────────────────────────┤
- * │ app.business.max-additional-delivery-distance│ 10.0 km  │ §6  (configurable│
- * │                                              │          │  threshold)      │
- * │ app.business.after-5pm-max-distance-km       │ 30.0 km  │ §9 / §10         │
- * │ app.business.working-hour-start              │ 10       │ §8               │
- * │ app.business.working-hour-end                │ 20       │ §8               │
- * │ app.business.cutoff-hour                     │ 17       │ §9               │
- * └────────────────────────────────────────────────────────────────────────────┘
+ * ┌──────────────────────────────────────────────────────────────────────────────────┐
+ * │ Property key                                   │ Default  │ Section in spec      │
+ * ├──────────────────────────────────────────────────────────────────────────────────┤
+ * │ app.business.max-additional-delivery-distance  │ 10.0 km  │ §6 (configurable)    │
+ * │ app.business.after-5pm-max-distance-km         │ 30.0 km  │ §9 / §10             │
+ * │ app.business.working-hour-start                │ 10       │ §8                   │
+ * │ app.business.working-hour-end                  │ 20       │ §8                   │
+ * │ app.business.cutoff-hour                       │ 17       │ §9                   │
+ * │ app.business.enable-busy-partner-reuse         │ true     │ Cross-vendor reuse   │
+ * │ app.business.partner-rest-duration-minutes     │ 30       │ Rest after delivery  │
+ * └──────────────────────────────────────────────────────────────────────────────────┘
  */
 @Getter
 @Setter
@@ -69,4 +70,29 @@ public class BusinessRulesConfig {
      * Default: 17  (5:00 PM)
      */
     private int cutoffHour = 17;
+
+    /**
+     * Cross-vendor busy-partner reuse toggle.
+     *
+     * When {@code true}, the assignment algorithm will consider delivery partners
+     * who are currently busy on a different vendor's order, provided they still
+     * have sufficient remaining capacity. Their ETA is calculated as:
+     *
+     *   currentAssignment.expectedDeliveryTime
+     *   + partnerRestDurationMinutes  (rest at home)
+     *   + travel time for the new order
+     *
+     * snapped to the next valid working window.
+     *
+     * Default: true
+     */
+    private boolean enableBusyPartnerReuse = true;
+
+    /**
+     * Minutes a partner is assumed to rest at home between completing one
+     * delivery and starting the next one (used in the busy-partner ETA formula).
+     *
+     * Default: 30 minutes
+     */
+    private int partnerRestDurationMinutes = 30;
 }

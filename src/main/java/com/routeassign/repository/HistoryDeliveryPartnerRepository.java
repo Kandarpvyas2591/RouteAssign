@@ -38,4 +38,10 @@ public interface HistoryDeliveryPartnerRepository extends JpaRepository<HistoryD
             LIMIT 1
             """)
     Optional<HistoryDeliveryPartner> findLatestCompletedByPartner(@Param("partnerId") Long partnerId);
+
+    /** Count of completed deliveries for a partner — used in leaderboard and dashboard. */
+    long countByDeliveryPartner_IdAndStatus(Long partnerId, HistoryStatus status);
+
+    /** Total deliveries (all statuses) for a partner — used in the partner dashboard. */
+    long countByDeliveryPartner_Id(Long partnerId);
 }

@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,12 +33,27 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    public List<CustomerDetailsResponse> getAll() {
+        return customerDetailsRepository.findAll()
+                .stream().map(this::toResponse).toList();
+    }
+
+    @Override
     @Transactional
     public CustomerDetailsResponse updateLocation(Long id, UpdateLocationRequest request) {
         CustomerDetails customer = findById(id);
         customer.setLatitude(request.getLatitude());
         customer.setLongitude(request.getLongitude());
         return toResponse(customerDetailsRepository.save(customer));
+    }
+
+    @Override
+    @Transactional
+    public void deactivate(Long id) {
+        CustomerDetails customer = findById(id);
+        customer.getAuth().setIsActive(false);
+        customerDetailsRepository.save(customer);
+        log.info("Deactivated customer id={}", id);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -85,6 +85,45 @@ public class DeliveryTimeAlgorithmServiceImpl implements DeliveryTimeAlgorithmSe
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Busy-partner ETA (cross-vendor reuse)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Calculates the expected delivery time for a partner who is currently busy
+     * on a different vendor's order.
+     *
+     * Steps:
+     *  1. Partner finishes current delivery at {@code currentDeliveryEta}.
+     *  2. Partner travels home and rests for {@code restDurationMinutes}.
+     *     → restReadyTime = currentDeliveryEta + restDurationMinutes
+     *  3. Snap restReadyTime to the next valid working window:
+     *       - If restReadyTime is before 10 AM  → start at 10 AM same day
+     *       - If restReadyTime is after  8 PM   → start at 10 AM next day
+     *       - If restReadyTime is after  5 PM AND Home→Vendor > 30 km
+     *                                           → start at 10 AM next day
+     *       - Otherwise                         → start at restReadyTime
+     *  4. Schedule (Home→Vendor + Vendor→Customer) travel within working hours
+     *     from that start time, spilling to the next day if needed.
+     */
+    @Override
+    public LocalDateTime calculateEtaForBusyPartner(
+            LocalDateTime currentDeliveryEta,
+            int           restDurationMinutes,
+            double        distancePartnerToVendor,
+            double        distanceVendorToCustomer) {
+
+        // Step 1 + 2: when the partner is rested and ready to leave home
+        LocalDateTime restReadyTime = currentDeliveryEta.plusMinutes(restDurationMinutes);
+
+        // Step 3: snap to the next valid working window using the existing rule logic
+        LocalDateTime workStart = determineWorkStartTime(restReadyTime, distancePartnerToVendor);
+
+        // Step 4: schedule total travel within working hours
+        double travelHours = (distancePartnerToVendor + distanceVendorToCustomer) * HOURS_PER_KM;
+        return scheduleWithinWorkingHours(workStart, travelHours);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Private helpers
     // ─────────────────────────────────────────────────────────────────────────
 

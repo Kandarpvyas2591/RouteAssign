@@ -31,9 +31,21 @@ public interface OrderService {
     List<OrderResponse> getByCustomerId(Long customerId);
 
     /**
+     * Returns all orders placed by a specific customer filtered by status.
+     * Used by the customer's "My Orders" screen with status tabs.
+     */
+    List<OrderResponse> getByCustomerIdAndStatus(Long customerId, OrderStatus status);
+
+    /**
      * Returns all orders received by a specific vendor.
      */
     List<OrderResponse> getByVendorId(Long vendorId);
+
+    /**
+     * Returns all orders received by a specific vendor filtered by status.
+     * Used by the vendor portal's order management screen.
+     */
+    List<OrderResponse> getByVendorIdAndStatus(Long vendorId, OrderStatus status);
 
     /**
      * Returns all orders with a given status.

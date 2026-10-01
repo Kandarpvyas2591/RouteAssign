@@ -16,4 +16,7 @@ public interface HistoryVendorRepository extends JpaRepository<HistoryVendor, Lo
     List<HistoryVendor> findAllByVendor_Id(Long vendorId);
 
     List<HistoryVendor> findAllByVendor_IdAndStatus(Long vendorId, HistoryStatus status);
+
+    /** Count of records for a vendor with a specific status — used in dashboard stats. */
+    long countByVendor_IdAndStatus(Long vendorId, HistoryStatus status);
 }

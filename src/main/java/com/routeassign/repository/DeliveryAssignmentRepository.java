@@ -51,4 +51,20 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
               AND da.deliveryStatus NOT IN ('DELIVERED', 'CANCELLED', 'FAILED')
             """)
     List<DeliveryAssignment> findActiveAssignmentsByPartner(@Param("partnerId") Long partnerId);
+
+    /**
+     * Returns the single active assignment with the latest expectedDeliveryTime
+     * for a given partner. Used to determine when a busy partner will be free
+     * so the algorithm can compute a rest-adjusted ETA for them.
+     *
+     * Returns empty if the partner has no active assignments (i.e. they are free).
+     */
+    @Query("""
+            SELECT da FROM DeliveryAssignment da
+            WHERE da.deliveryPartner.id = :partnerId
+              AND da.deliveryStatus NOT IN ('DELIVERED', 'CANCELLED', 'FAILED')
+            ORDER BY da.expectedDeliveryTime DESC
+            LIMIT 1
+            """)
+    Optional<DeliveryAssignment> findLatestActiveAssignmentByPartner(@Param("partnerId") Long partnerId);
 }

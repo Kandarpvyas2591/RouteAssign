@@ -3,6 +3,8 @@ package com.routeassign.controller;
 import com.routeassign.dto.request.UpdateAvailabilityRequest;
 import com.routeassign.dto.request.UpdateLocationRequest;
 import com.routeassign.dto.response.ApiResponse;
+import com.routeassign.dto.response.LeaderboardEntryResponse;
+import com.routeassign.dto.response.PartnerDashboardResponse;
 import com.routeassign.dto.response.UserDetailsResponse;
 import com.routeassign.service.UserService;
 import jakarta.validation.Valid;
@@ -76,5 +78,38 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
         userService.deactivate(id);
         return ResponseEntity.ok(ApiResponse.success("User deactivated", null));
+    }
+
+    /**
+     * GET /api/users/{id}/dashboard
+     * Returns a partner's personal dashboard snapshot:
+     *   - Identity and current availability/active status
+     *   - Capacity utilisation (total / assigned / remaining kg)
+     *   - All currently active (non-terminal) assignments with ETAs
+     *   - Career totals: total / completed / cancelled / failed deliveries
+     *
+     * Response: 200 OK — PartnerDashboardResponse
+     */
+    @GetMapping("/{id}/dashboard")
+    public ResponseEntity<ApiResponse<PartnerDashboardResponse>> getPartnerDashboard(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getPartnerDashboard(id)));
+    }
+
+    /**
+     * GET /api/users/leaderboard?limit={n}
+     * Returns the delivery partner leaderboard sorted by rating (desc),
+     * then by completed deliveries (desc).
+     * Only active partners are included.
+     *
+     * Query param: limit (optional, default 10) — max entries to return.
+     *              Pass 0 to return all active partners.
+     *
+     * Response: 200 OK — List<LeaderboardEntryResponse>
+     */
+    @GetMapping("/leaderboard")
+    public ResponseEntity<ApiResponse<List<LeaderboardEntryResponse>>> getLeaderboard(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getLeaderboard(limit)));
     }
 }

@@ -48,31 +48,45 @@ public class OrderController {
     /**
      * GET /api/orders/customer/{customerId}
      * Get all orders for a specific customer.
+     * Optional ?status= filter for the customer's "My Orders" tabs.
      */
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getByCustomerId(
-            @PathVariable Long customerId) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getByCustomerId(customerId)));
+            @PathVariable Long customerId,
+            @RequestParam(required = false) OrderStatus status) {
+        List<OrderResponse> result = (status != null)
+                ? orderService.getByCustomerIdAndStatus(customerId, status)
+                : orderService.getByCustomerId(customerId);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     /**
      * GET /api/orders/vendor/{vendorId}
      * Get all orders received by a specific vendor.
+     * Optional ?status= filter for the vendor portal's order management screen.
      */
     @GetMapping("/vendor/{vendorId}")
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getByVendorId(
-            @PathVariable Long vendorId) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getByVendorId(vendorId)));
+            @PathVariable Long vendorId,
+            @RequestParam(required = false) OrderStatus status) {
+        List<OrderResponse> result = (status != null)
+                ? orderService.getByVendorIdAndStatus(vendorId, status)
+                : orderService.getByVendorId(vendorId);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     /**
-     * GET /api/orders?status={status}
-     * Get all orders filtered by status.
+     * GET /api/orders
+     * Get all orders, optionally filtered by ?status=.
+     * Omitting ?status returns every order in the system (admin view).
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getByStatus(
-            @RequestParam OrderStatus status) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getByStatus(status)));
+            @RequestParam(required = false) OrderStatus status) {
+        List<OrderResponse> result = (status != null)
+                ? orderService.getByStatus(status)
+                : orderService.getByStatus(null);
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     /**

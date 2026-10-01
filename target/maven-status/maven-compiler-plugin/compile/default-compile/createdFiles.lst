@@ -10,6 +10,7 @@ com\routeassign\dto\response\ApiResponse.class
 com\routeassign\exception\InsufficientCapacityException.class
 com\routeassign\repository\HistoryDeliveryPartnerRepository.class
 com\routeassign\controller\VendorController.class
+com\routeassign\dto\request\ChangePasswordRequest.class
 com\routeassign\service\algorithm\DistanceAlgorithmService.class
 com\routeassign\domain\entity\HistoryVendor$HistoryVendorBuilder.class
 com\routeassign\domain\entity\VendorDetails.class
@@ -26,6 +27,7 @@ com\routeassign\dto\response\CustomerDetailsResponse$CustomerDetailsResponseBuil
 com\routeassign\domain\entity\DeliveryAssignment$DeliveryAssignmentBuilder.class
 com\routeassign\dto\response\HistoryVendorResponse.class
 com\routeassign\exception\ResourceNotFoundException.class
+com\routeassign\dto\response\DashboardStatsResponse$DashboardStatsResponseBuilder.class
 com\routeassign\exception\ErrorResponse$FieldError$FieldErrorBuilder.class
 com\routeassign\repository\OrderItemRepository.class
 com\routeassign\domain\entity\Rating$RatingBuilder.class
@@ -34,12 +36,14 @@ com\routeassign\repository\DeliveryAssignmentRepository.class
 com\routeassign\domain\entity\VendorDetails$VendorDetailsBuilder.class
 com\routeassign\repository\RatingRepository.class
 com\routeassign\controller\OrderController.class
+com\routeassign\dto\response\ReassignResponse$ReassignResponseBuilder.class
 com\routeassign\service\impl\VendorServiceImpl.class
 com\routeassign\service\ItemService.class
 com\routeassign\controller\UserController.class
 com\routeassign\domain\enums\DeliveryStatus.class
 com\routeassign\exception\DuplicateResourceException.class
 com\routeassign\service\algorithm\PartnerSelectionAlgorithmService.class
+com\routeassign\service\algorithm\impl\PartnerSelectionAlgorithmServiceImpl$Candidate.class
 com\routeassign\controller\StoreController.class
 com\routeassign\repository\HistoryVendorRepository.class
 com\routeassign\controller\ItemController.class
@@ -77,14 +81,18 @@ com\routeassign\domain\entity\UserDetails.class
 com\routeassign\domain\entity\DeliveryAssignment.class
 com\routeassign\dto\request\LoginRequest.class
 com\routeassign\dto\request\ItemRequest.class
+com\routeassign\dto\response\PartnerDashboardResponse.class
 com\routeassign\dto\response\StoreResponse.class
+com\routeassign\service\DashboardService.class
 com\routeassign\dto\request\RegisterRequest.class
 com\routeassign\domain\entity\Order$OrderBuilder.class
 com\routeassign\RouteAssignApplication.class
 com\routeassign\exception\ErrorResponse$FieldError.class
 com\routeassign\repository\UserDetailsRepository.class
+com\routeassign\service\algorithm\PartnerSelectionAlgorithmService$PartnerSelectionResult.class
 com\routeassign\dto\response\RatingResponse.class
 com\routeassign\domain\entity\CustomerDetails.class
+com\routeassign\service\impl\DashboardServiceImpl.class
 com\routeassign\domain\entity\Item.class
 com\routeassign\dto\response\OrderResponse.class
 com\routeassign\exception\UnauthorizedException.class
@@ -96,6 +104,7 @@ com\routeassign\domain\entity\Rating.class
 com\routeassign\dto\request\RatingRequest.class
 com\routeassign\dto\response\HistoryDeliveryPartnerResponse$HistoryDeliveryPartnerResponseBuilder.class
 com\routeassign\exception\InsufficientStockException.class
+com\routeassign\dto\response\PartnerDashboardResponse$PartnerDashboardResponseBuilder.class
 com\routeassign\config\BusinessRulesConfig.class
 com\routeassign\repository\UserAuthRepository.class
 com\routeassign\dto\response\HistoryDeliveryPartnerResponse.class
@@ -105,7 +114,9 @@ com\routeassign\dto\response\ItemResponse.class
 com\routeassign\service\HistoryService.class
 com\routeassign\dto\response\CustomerDetailsResponse.class
 com\routeassign\dto\response\HistoryVendorResponse$HistoryVendorResponseBuilder.class
+com\routeassign\dto\response\LeaderboardEntryResponse.class
 com\routeassign\controller\DeliveryAssignmentController.class
+com\routeassign\controller\DashboardController.class
 com\routeassign\dto\request\UpdateAvailabilityRequest.class
 com\routeassign\dto\response\AuthResponse$AuthResponseBuilder.class
 com\routeassign\dto\request\OrderRequest.class
@@ -118,7 +129,9 @@ com\routeassign\domain\entity\UserAuth.class
 com\routeassign\dto\response\ApiResponse$ApiResponseBuilder.class
 com\routeassign\repository\CustomerDetailsRepository.class
 com\routeassign\repository\OrderRepository.class
+com\routeassign\dto\response\ReassignResponse.class
 com\routeassign\domain\entity\Order.class
+com\routeassign\dto\response\DashboardStatsResponse.class
 com\routeassign\service\OrderService.class
 com\routeassign\dto\response\DeliveryAssignmentResponse.class
 com\routeassign\service\impl\CustomerServiceImpl.class
@@ -126,5 +139,6 @@ com\routeassign\dto\response\OrderItemResponse.class
 com\routeassign\service\DeliveryAssignmentService.class
 com\routeassign\service\impl\AuthServiceImpl$1.class
 com\routeassign\config\SecurityConfig.class
+com\routeassign\dto\response\LeaderboardEntryResponse$LeaderboardEntryResponseBuilder.class
 com\routeassign\controller\HistoryController.class
 com\routeassign\service\algorithm\DeliveryTimeAlgorithmService.class

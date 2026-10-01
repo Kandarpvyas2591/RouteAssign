@@ -1,5 +1,6 @@
 package com.routeassign.controller;
 
+import com.routeassign.dto.request.ChangePasswordRequest;
 import com.routeassign.dto.request.LoginRequest;
 import com.routeassign.dto.request.RegisterRequest;
 import com.routeassign.dto.response.ApiResponse;
@@ -40,5 +41,28 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+    }
+
+    /**
+     * PATCH /api/auth/password
+     * Change the password for an existing account.
+     *
+     * The caller must supply:
+     *   - authUserId   — the UserAuth.userId of the account to update
+     *   - currentPassword — verified against the stored hash before accepting the change
+     *   - newPassword     — min 8 characters; replaces the current password
+     *
+     * On success, passwordResetAt is updated on the UserAuth record.
+     *
+     * Response: 200 OK — "Password changed successfully"
+     * Error: 400 — current password incorrect
+     * Error: 400 — account deactivated
+     * Error: 404 — user not found
+     */
+    @PatchMapping("/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
     }
 }

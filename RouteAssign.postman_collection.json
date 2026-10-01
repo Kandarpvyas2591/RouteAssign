@@ -1,695 +1,1112 @@
 {
   "info": {
-    "name": "RouteAssign - Auto Delivery Partner Assignment",
-    "_postman_id": "routeassign-collection-v1",
-    "description": "Complete API collection for the RouteAssign Auto Delivery Partner Assignment System.\n\nBase URL variable: {{baseUrl}} → http://localhost:8080\nAuth token variable: {{token}} → set automatically by the login request script.",
+    "name": "RouteAssign - Full Automation Collection",
+    "_postman_id": "routeassign-collection-v2",
+    "description": "Complete RouteAssign collection for live API testing.\n\nHow to use:\n1. Import this file into Postman.\n2. Make sure your Spring Boot server is running on http://localhost:8080.\n3. Run the folders IN ORDER using the Collection Runner (or Postman AI):\n   Phase 1 — Seed: Auth → Items → Stock\n   Phase 2 — Orders & Lifecycle\n   Phase 3 — Query & Read\n   Phase 4 — Edge Cases & Errors\n\nAll tokens and IDs are captured automatically via test scripts and stored as collection variables. No manual editing needed.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
-    { "key": "token",   "value": "",                      "type": "string" }
+    { "key": "baseUrl",      "value": "http://localhost:8080", "type": "string" },
+    { "key": "adminToken",   "value": "", "type": "string" },
+    { "key": "v1Token",      "value": "", "type": "string" },
+    { "key": "v2Token",      "value": "", "type": "string" },
+    { "key": "v3Token",      "value": "", "type": "string" },
+    { "key": "p1Token",      "value": "", "type": "string" },
+    { "key": "p2Token",      "value": "", "type": "string" },
+    { "key": "p3Token",      "value": "", "type": "string" },
+    { "key": "p4Token",      "value": "", "type": "string" },
+    { "key": "c1Token",      "value": "", "type": "string" },
+    { "key": "c2Token",      "value": "", "type": "string" },
+    { "key": "c3Token",      "value": "", "type": "string" },
+    { "key": "token",        "value": "", "type": "string" },
+    { "key": "vendorId1",    "value": "", "type": "string" },
+    { "key": "vendorId2",    "value": "", "type": "string" },
+    { "key": "vendorId3",    "value": "", "type": "string" },
+    { "key": "partnerId1",   "value": "", "type": "string" },
+    { "key": "partnerId2",   "value": "", "type": "string" },
+    { "key": "partnerId3",   "value": "", "type": "string" },
+    { "key": "partnerId4",   "value": "", "type": "string" },
+    { "key": "customerId1",  "value": "", "type": "string" },
+    { "key": "customerId2",  "value": "", "type": "string" },
+    { "key": "customerId3",  "value": "", "type": "string" },
+    { "key": "itemId1",      "value": "", "type": "string" },
+    { "key": "itemId2",      "value": "", "type": "string" },
+    { "key": "itemId3",      "value": "", "type": "string" },
+    { "key": "itemId4",      "value": "", "type": "string" },
+    { "key": "itemId5",      "value": "", "type": "string" },
+    { "key": "itemId6",      "value": "", "type": "string" },
+    { "key": "orderId1",     "value": "", "type": "string" },
+    { "key": "orderId2",     "value": "", "type": "string" },
+    { "key": "orderId3",     "value": "", "type": "string" },
+    { "key": "orderId4",     "value": "", "type": "string" },
+    { "key": "orderId5",     "value": "", "type": "string" },
+    { "key": "orderId6",     "value": "", "type": "string" },
+    { "key": "assignId1",    "value": "", "type": "string" },
+    { "key": "assignId2",    "value": "", "type": "string" },
+    { "key": "assignId3",    "value": "", "type": "string" },
+    { "key": "assignId4",    "value": "", "type": "string" },
+    { "key": "assignId5",    "value": "", "type": "string" },
+    { "key": "assignId6",    "value": "", "type": "string" },
+    { "key": "histPartner1", "value": "", "type": "string" },
+    { "key": "histVendor1",  "value": "", "type": "string" }
   ],
   "item": [
 
     {
-      "name": "Auth",
+      "name": "Phase 1 — Seed Data",
+      "description": "Run this entire folder first. It registers all users, creates items, and stocks every vendor. All tokens and IDs are saved automatically.",
       "item": [
+
         {
-          "name": "Register - Customer",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"customer1@example.com\",\n  \"username\": \"customer1\",\n  \"password\": \"password123\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9876543210\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946\n}"
-            }
-          }
-        },
-        {
-          "name": "Register - Delivery Partner",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"partner1@example.com\",\n  \"username\": \"partner1\",\n  \"password\": \"password123\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9123456780\",\n  \"latitude\": 12.9352,\n  \"longitude\": 77.6245\n}"
-            }
-          }
-        },
-        {
-          "name": "Register - Vendor",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"vendor1@example.com\",\n  \"username\": \"vendor1\",\n  \"password\": \"password123\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9000000001\",\n  \"latitude\": 12.9500,\n  \"longitude\": 77.6100\n}"
-            }
-          }
-        },
-        {
-          "name": "Register - Admin",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@routeassign.com\",\n  \"username\": \"admin\",\n  \"password\": \"adminpass123\",\n  \"role\": \"ADMIN\",\n  \"mobileNo\": \"9000000000\",\n  \"latitude\": null,\n  \"longitude\": null\n}"
-            }
-          }
-        },
-        {
-          "name": "Login",
-          "event": [
+          "name": "1.1 Auth — Register Users",
+          "item": [
+
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var json = pm.response.json();",
-                  "if (json.data && json.data.token) {",
-                  "    pm.collectionVariables.set('token', json.data.token);",
-                  "    console.log('Token saved:', json.data.token);",
-                  "}"
-                ],
-                "type": "text/javascript"
+              "name": "Register Admin",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('adminToken', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@routeassign.com\",\n  \"username\": \"admin\",\n  \"password\": \"adminpass123\",\n  \"role\": \"ADMIN\",\n  \"mobileNo\": \"9000000000\",\n  \"latitude\": null,\n  \"longitude\": null\n}" }
+              }
+            },
+
+            {
+              "name": "Register Vendor 1 (Bangalore North)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('v1Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"vendor1@example.com\",\n  \"username\": \"vendor1\",\n  \"password\": \"password123\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9000000001\",\n  \"latitude\": 12.9500,\n  \"longitude\": 77.6100\n}" }
+              }
+            },
+
+            {
+              "name": "Register Vendor 2 (Bangalore East)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('v2Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"vendor2@example.com\",\n  \"username\": \"vendor2\",\n  \"password\": \"password123\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9000000002\",\n  \"latitude\": 12.9600,\n  \"longitude\": 77.6200\n}" }
+              }
+            },
+
+            {
+              "name": "Register Vendor 3 (Bangalore South)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('v3Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"vendor3@example.com\",\n  \"username\": \"vendor3\",\n  \"password\": \"password123\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9000000003\",\n  \"latitude\": 12.9450,\n  \"longitude\": 77.5900\n}" }
+              }
+            },
+
+            {
+              "name": "Register Delivery Partner 1",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('p1Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner1@example.com\",\n  \"username\": \"partner1\",\n  \"password\": \"password123\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000001\",\n  \"latitude\": 12.9352,\n  \"longitude\": 77.6245\n}" }
+              }
+            },
+
+            {
+              "name": "Register Delivery Partner 2",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('p2Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner2@example.com\",\n  \"username\": \"partner2\",\n  \"password\": \"password123\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000002\",\n  \"latitude\": 12.9360,\n  \"longitude\": 77.6250\n}" }
+              }
+            },
+
+            {
+              "name": "Register Delivery Partner 3",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('p3Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner3@example.com\",\n  \"username\": \"partner3\",\n  \"password\": \"password123\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000003\",\n  \"latitude\": 12.9200,\n  \"longitude\": 77.5800\n}" }
+              }
+            },
+
+            {
+              "name": "Register Delivery Partner 4",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('p4Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner4@example.com\",\n  \"username\": \"partner4\",\n  \"password\": \"password123\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000004\",\n  \"latitude\": 12.9700,\n  \"longitude\": 77.6400\n}" }
+              }
+            },
+
+            {
+              "name": "Register Customer 1",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) { pm.collectionVariables.set('c1Token', j.data.token); pm.collectionVariables.set('token', j.data.token); }"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer1@example.com\",\n  \"username\": \"customer1\",\n  \"password\": \"password123\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9200000001\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946\n}" }
+              }
+            },
+
+            {
+              "name": "Register Customer 2",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('c2Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer2@example.com\",\n  \"username\": \"customer2\",\n  \"password\": \"password123\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9200000002\",\n  \"latitude\": 12.9650,\n  \"longitude\": 77.6000\n}" }
+              }
+            },
+
+            {
+              "name": "Register Customer 3",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) pm.collectionVariables.set('c3Token', j.data.token);"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer3@example.com\",\n  \"username\": \"customer3\",\n  \"password\": \"password123\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9200000003\",\n  \"latitude\": 12.9800,\n  \"longitude\": 77.5700\n}" }
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"customer1@example.com\",\n  \"password\": \"password123\"\n}"
-            }
-          }
-        }
-      ]
-    },
 
-    {
-      "name": "Users (Delivery Partners)",
-      "item": [
-        {
-          "name": "Get User by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/users/1", "host": ["{{baseUrl}}"], "path": ["api","users","1"] }
-          }
+          ]
         },
-        {
-          "name": "Get User by Auth ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/users/auth/1", "host": ["{{baseUrl}}"], "path": ["api","users","auth","1"] }
-          }
-        },
-        {
-          "name": "Get All Active Delivery Partners",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/users/delivery-partners", "host": ["{{baseUrl}}"], "path": ["api","users","delivery-partners"] }
-          }
-        },
-        {
-          "name": "Update Delivery Partner Location",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/users/1/location", "host": ["{{baseUrl}}"], "path": ["api","users","1","location"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"latitude\": 12.9400,\n  \"longitude\": 77.6200\n}"
-            }
-          }
-        },
-        {
-          "name": "Update Delivery Partner Availability",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/users/1/availability", "host": ["{{baseUrl}}"], "path": ["api","users","1","availability"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isAvailable\": true\n}"
-            }
-          }
-        },
-        {
-          "name": "Deactivate User",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/users/1", "host": ["{{baseUrl}}"], "path": ["api","users","1"] }
-          }
-        }
-      ]
-    },
 
-    {
-      "name": "Customers",
-      "item": [
         {
-          "name": "Get Customer by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/customers/1", "host": ["{{baseUrl}}"], "path": ["api","customers","1"] }
-          }
-        },
-        {
-          "name": "Get Customer by Auth ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/customers/auth/1", "host": ["{{baseUrl}}"], "path": ["api","customers","auth","1"] }
-          }
-        },
-        {
-          "name": "Update Customer Location",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/customers/1/location", "host": ["{{baseUrl}}"], "path": ["api","customers","1","location"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"latitude\": 12.9800,\n  \"longitude\": 77.5900\n}"
-            }
-          }
-        }
-      ]
-    },
+          "name": "1.2 Auth — Login (save tokens + resolve IDs)",
+          "description": "Logins capture tokens. The GET calls after each login resolve the profile ID (vendorId, partnerId, customerId) from the auth userId returned by login.",
+          "item": [
 
-    {
-      "name": "Vendors",
-      "item": [
-        {
-          "name": "Get All Active Vendors",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/vendors", "host": ["{{baseUrl}}"], "path": ["api","vendors"] }
-          }
-        },
-        {
-          "name": "Get Vendor by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/vendors/1", "host": ["{{baseUrl}}"], "path": ["api","vendors","1"] }
-          }
-        },
-        {
-          "name": "Get Vendor by Auth ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/vendors/auth/1", "host": ["{{baseUrl}}"], "path": ["api","vendors","auth","1"] }
-          }
-        },
-        {
-          "name": "Update Vendor Location",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/vendors/1/location", "host": ["{{baseUrl}}"], "path": ["api","vendors","1","location"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"latitude\": 12.9550,\n  \"longitude\": 77.6050\n}"
-            }
-          }
-        },
-        {
-          "name": "Deactivate Vendor",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/vendors/1", "host": ["{{baseUrl}}"], "path": ["api","vendors","1"] }
-          }
-        }
-      ]
-    },
-
-    {
-      "name": "Items",
-      "item": [
-        {
-          "name": "Create Item",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Fresh Apples\",\n  \"price\": 120.00,\n  \"weight\": 2.5,\n  \"description\": \"Fresh red apples, 2.5 kg box\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Get All Items",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] }
-          }
-        },
-        {
-          "name": "Search Items by Name",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/items?name=apple",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","items"],
-              "query": [{ "key": "name", "value": "apple" }]
-            }
-          }
-        },
-        {
-          "name": "Get Item by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/items/1", "host": ["{{baseUrl}}"], "path": ["api","items","1"] }
-          }
-        },
-        {
-          "name": "Update Item",
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/items/1", "host": ["{{baseUrl}}"], "path": ["api","items","1"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Fresh Apples Premium\",\n  \"price\": 150.00,\n  \"weight\": 2.5,\n  \"description\": \"Premium fresh red apples, 2.5 kg box\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Item",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/items/1", "host": ["{{baseUrl}}"], "path": ["api","items","1"] }
-          }
-        }
-      ]
-    },
-
-    {
-      "name": "Store (Vendor Inventory)",
-      "item": [
-        {
-          "name": "Add or Update Stock",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/vendors/1/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","1","store"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"itemId\": 1,\n  \"quantity\": 50\n}"
-            }
-          }
-        },
-        {
-          "name": "Get All Stock for Vendor",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/vendors/1/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","1","store"] }
-          }
-        },
-        {
-          "name": "Get Store Entry by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/vendors/1/store/1", "host": ["{{baseUrl}}"], "path": ["api","vendors","1","store","1"] }
-          }
-        },
-        {
-          "name": "Remove Stock Entry",
-          "request": {
-            "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/vendors/1/store/items/1", "host": ["{{baseUrl}}"], "path": ["api","vendors","1","store","items","1"] }
-          }
-        }
-      ]
-    },
-
-    {
-      "name": "Orders",
-      "item": [
-        {
-          "name": "Place Order (triggers auto-assignment)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders?customerId=1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders"],
-              "query": [{ "key": "customerId", "value": "1" }]
+            {
+              "name": "Login as Vendor 1",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('v1Token', j.data.token);",
+                "  pm.collectionVariables.set('v1AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"vendor1@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"vendorId\": 1,\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": [\n    {\n      \"itemId\": 1,\n      \"quantity\": 2\n    },\n    {\n      \"itemId\": 2,\n      \"quantity\": 1\n    }\n  ]\n}"
+            {
+              "name": "Get Vendor 1 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('vendorId1', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/vendors/auth/{{v1AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","auth","{{v1AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Vendor 2",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('v2Token', j.data.token);",
+                "  pm.collectionVariables.set('v2AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"vendor2@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Vendor 2 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('vendorId2', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{v2Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/vendors/auth/{{v2AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","auth","{{v2AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Vendor 3",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('v3Token', j.data.token);",
+                "  pm.collectionVariables.set('v3AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"vendor3@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Vendor 3 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('vendorId3', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{v3Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/vendors/auth/{{v3AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","auth","{{v3AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Partner 1",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('p1Token', j.data.token);",
+                "  pm.collectionVariables.set('p1AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner1@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Partner 1 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('partnerId1', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{p1Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/users/auth/{{p1AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","users","auth","{{p1AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Partner 2",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('p2Token', j.data.token);",
+                "  pm.collectionVariables.set('p2AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner2@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Partner 2 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('partnerId2', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{p2Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/users/auth/{{p2AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","users","auth","{{p2AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Partner 3",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('p3Token', j.data.token);",
+                "  pm.collectionVariables.set('p3AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner3@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Partner 3 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('partnerId3', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{p3Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/users/auth/{{p3AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","users","auth","{{p3AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Partner 4",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('p4Token', j.data.token);",
+                "  pm.collectionVariables.set('p4AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"partner4@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Partner 4 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('partnerId4', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{p4Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/users/auth/{{p4AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","users","auth","{{p4AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Customer 1",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('c1Token', j.data.token);",
+                "  pm.collectionVariables.set('token', j.data.token);",
+                "  pm.collectionVariables.set('c1AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer1@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Customer 1 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('customerId1', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/customers/auth/{{c1AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","customers","auth","{{c1AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Customer 2",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('c2Token', j.data.token);",
+                "  pm.collectionVariables.set('c2AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer2@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Customer 2 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('customerId2', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c2Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/customers/auth/{{c2AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","customers","auth","{{c2AuthId}}"] }
+              }
+            },
+
+            {
+              "name": "Login as Customer 3",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.token) {",
+                "  pm.collectionVariables.set('c3Token', j.data.token);",
+                "  pm.collectionVariables.set('c3AuthId', String(j.data.userId));",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer3@example.com\",\n  \"password\": \"password123\"\n}" }
+              }
+            },
+            {
+              "name": "Get Customer 3 Profile ID",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('customerId3', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c3Token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/customers/auth/{{c3AuthId}}", "host": ["{{baseUrl}}"], "path": ["api","customers","auth","{{c3AuthId}}"] }
+              }
             }
-          }
+
+          ]
         },
+
         {
-          "name": "Get Order by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/orders/1", "host": ["{{baseUrl}}"], "path": ["api","orders","1"] }
-          }
-        },
-        {
-          "name": "Get Orders by Customer",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/orders/customer/1", "host": ["{{baseUrl}}"], "path": ["api","orders","customer","1"] }
-          }
-        },
-        {
-          "name": "Get Orders by Vendor",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/orders/vendor/1", "host": ["{{baseUrl}}"], "path": ["api","orders","vendor","1"] }
-          }
-        },
-        {
-          "name": "Get Orders by Status - PENDING",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders?status=PENDING",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders"],
-              "query": [{ "key": "status", "value": "PENDING" }]
+          "name": "1.3 Items — Create Catalogue (6 items)",
+          "item": [
+
+            {
+              "name": "Create Item 1 — Fresh Apples (2.5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('itemId1', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Fresh Apples\",\n  \"price\": 120.00,\n  \"weight\": 2.5,\n  \"description\": \"Red apples 2.5 kg box\"\n}" }
+              }
+            },
+
+            {
+              "name": "Create Item 2 — Orange Juice (1.5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('itemId2', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Orange Juice\",\n  \"price\": 80.00,\n  \"weight\": 1.5,\n  \"description\": \"1L orange juice\"\n}" }
+              }
+            },
+
+            {
+              "name": "Create Item 3 — Rice Bag (10 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('itemId3', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Rice Bag\",\n  \"price\": 350.00,\n  \"weight\": 10.0,\n  \"description\": \"10 kg basmati rice\"\n}" }
+              }
+            },
+
+            {
+              "name": "Create Item 4 — Bread Loaf (0.5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('itemId4', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bread Loaf\",\n  \"price\": 45.00,\n  \"weight\": 0.5,\n  \"description\": \"White bread loaf\"\n}" }
+              }
+            },
+
+            {
+              "name": "Create Item 5 — Cooking Oil (5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('itemId5', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Cooking Oil\",\n  \"price\": 180.00,\n  \"weight\": 5.0,\n  \"description\": \"5L sunflower oil\"\n}" }
+              }
+            },
+
+            {
+              "name": "Create Item 6 — Mineral Water Case (8 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('itemId6', String(j.data.id));"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Mineral Water Case\",\n  \"price\": 250.00,\n  \"weight\": 8.0,\n  \"description\": \"24x500ml bottles\"\n}" }
+              }
+            },
+
+            {
+              "name": "Get All Items (verify all 6 exist)",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/items", "host": ["{{baseUrl}}"], "path": ["api","items"] }
+              }
+            },
+
+            {
+              "name": "Search Items by Name — apple",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/items?name=apple", "host": ["{{baseUrl}}"], "path": ["api","items"], "query": [{ "key": "name", "value": "apple" }] }
+              }
+            },
+
+            {
+              "name": "Get Item 1 by ID",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+                "url": { "raw": "{{baseUrl}}/api/items/{{itemId1}}", "host": ["{{baseUrl}}"], "path": ["api","items","{{itemId1}}"] }
+              }
+            },
+
+            {
+              "name": "Update Item 1 Price",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/items/{{itemId1}}", "host": ["{{baseUrl}}"], "path": ["api","items","{{itemId1}}"] },
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Fresh Apples Premium\",\n  \"price\": 150.00,\n  \"weight\": 2.5,\n  \"description\": \"Premium red apples 2.5 kg box\"\n}" }
+              }
             }
-          }
+
+          ]
         },
+
         {
-          "name": "Get Orders by Status - ASSIGNED",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders?status=ASSIGNED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders"],
-              "query": [{ "key": "status", "value": "ASSIGNED" }]
-            }
-          }
-        },
-        {
-          "name": "Get Orders by Status - DELIVERED",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders?status=DELIVERED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders"],
-              "query": [{ "key": "status", "value": "DELIVERED" }]
-            }
-          }
-        },
-        {
-          "name": "Update Order Status - PICKED_UP",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders/1/status?newStatus=PICKED_UP",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders","1","status"],
-              "query": [{ "key": "newStatus", "value": "PICKED_UP" }]
-            }
-          }
-        },
-        {
-          "name": "Update Order Status - IN_TRANSIT",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders/1/status?newStatus=IN_TRANSIT",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders","1","status"],
-              "query": [{ "key": "newStatus", "value": "IN_TRANSIT" }]
-            }
-          }
-        },
-        {
-          "name": "Update Order Status - DELIVERED",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders/1/status?newStatus=DELIVERED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders","1","status"],
-              "query": [{ "key": "newStatus", "value": "DELIVERED" }]
-            }
-          }
-        },
-        {
-          "name": "Update Order Status - CANCELLED",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders/1/status?newStatus=CANCELLED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","orders","1","status"],
-              "query": [{ "key": "newStatus", "value": "CANCELLED" }]
-            }
-          }
+          "name": "1.4 Store — Stock all Vendors",
+          "description": "Vendor 1: items 1,2,3,4,5 | Vendor 2: items 1,2,4,6 | Vendor 3: items 3,5,6,2",
+          "item": [
+
+            { "name": "Vendor 1 — Stock Item 1 (qty 100)", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId1}},\n  \"quantity\": 100\n}" } } },
+            { "name": "Vendor 1 — Stock Item 2 (qty 80)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId2}},\n  \"quantity\": 80\n}" } } },
+            { "name": "Vendor 1 — Stock Item 3 (qty 20)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId3}},\n  \"quantity\": 20\n}" } } },
+            { "name": "Vendor 1 — Stock Item 4 (qty 150)", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId4}},\n  \"quantity\": 150\n}" } } },
+            { "name": "Vendor 1 — Stock Item 5 (qty 40)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId5}},\n  \"quantity\": 40\n}" } } },
+
+            { "name": "Vendor 2 — Stock Item 1 (qty 60)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v2Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId2}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId2}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId1}},\n  \"quantity\": 60\n}" } } },
+            { "name": "Vendor 2 — Stock Item 2 (qty 90)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v2Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId2}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId2}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId2}},\n  \"quantity\": 90\n}" } } },
+            { "name": "Vendor 2 — Stock Item 4 (qty 200)", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v2Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId2}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId2}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId4}},\n  \"quantity\": 200\n}" } } },
+            { "name": "Vendor 2 — Stock Item 6 (qty 30)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v2Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId2}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId2}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId6}},\n  \"quantity\": 30\n}" } } },
+
+            { "name": "Vendor 3 — Stock Item 3 (qty 15)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v3Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId3}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId3}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId3}},\n  \"quantity\": 15\n}" } } },
+            { "name": "Vendor 3 — Stock Item 5 (qty 50)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v3Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId3}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId3}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId5}},\n  \"quantity\": 50\n}" } } },
+            { "name": "Vendor 3 — Stock Item 6 (qty 25)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v3Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId3}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId3}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId6}},\n  \"quantity\": 25\n}" } } },
+            { "name": "Vendor 3 — Stock Item 2 (qty 70)",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v3Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId3}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId3}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId2}},\n  \"quantity\": 70\n}" } } },
+
+            { "name": "Get Vendor 1 Full Stock",            "request": { "method": "GET",  "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store"] } } },
+            { "name": "Get Vendor 2 Full Stock",            "request": { "method": "GET",  "header": [{ "key": "Authorization", "value": "Bearer {{v2Token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId2}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId2}}","store"] } } },
+            { "name": "Get Vendor 3 Full Stock",            "request": { "method": "GET",  "header": [{ "key": "Authorization", "value": "Bearer {{v3Token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId3}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId3}}","store"] } } }
+
+          ]
         }
+
       ]
     },
 
     {
-      "name": "Delivery Assignments",
+      "name": "Phase 2 — Orders & Delivery Lifecycle",
+      "description": "Place 6 orders across 3 vendors and 3 customers. Each order captures the returned assignmentId. Then walk orders 1–3 through full delivery lifecycle. Order 4 is cancelled. Orders 5–6 test busy-partner reuse and capacity edge cases.",
       "item": [
+
         {
-          "name": "Get Assignment by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/assignments/1", "host": ["{{baseUrl}}"], "path": ["api","assignments","1"] }
-          }
-        },
-        {
-          "name": "Get Assignment by Order ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/assignments/order/1", "host": ["{{baseUrl}}"], "path": ["api","assignments","order","1"] }
-          }
-        },
-        {
-          "name": "Get Assignments by Partner ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/assignments/partner/1", "host": ["{{baseUrl}}"], "path": ["api","assignments","partner","1"] }
-          }
-        },
-        {
-          "name": "Get Assignments by Vendor ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/assignments/vendor/1", "host": ["{{baseUrl}}"], "path": ["api","assignments","vendor","1"] }
-          }
-        },
-        {
-          "name": "Update Assignment Status - EN_ROUTE_TO_VENDOR",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/assignments/1/status?newStatus=EN_ROUTE_TO_VENDOR",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","assignments","1","status"],
-              "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_VENDOR" }]
+          "name": "2.1 Place Orders",
+          "item": [
+
+            {
+              "name": "Order 1 — customer1 → vendor1, items 1×2 + item2×1 (6.5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data) {",
+                "  pm.collectionVariables.set('assignId1', String(j.data.id));",
+                "  pm.collectionVariables.set('orderId1',  String(j.data.orderId));",
+                "  console.log('Order 1 assigned to: ' + j.data.deliveryPartnerName + ' | ETA: ' + j.data.expectedDeliveryTime + ' | busy: ' + j.data.isPartnerBusy);",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId1}}" }] },
+                "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId1}},\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": [\n    { \"itemId\": {{itemId1}}, \"quantity\": 2 },\n    { \"itemId\": {{itemId2}}, \"quantity\": 1 }\n  ]\n}" }
+              }
+            },
+
+            {
+              "name": "Order 2 — customer2 → vendor1, item4×3 (1.5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data) {",
+                "  pm.collectionVariables.set('assignId2', String(j.data.id));",
+                "  pm.collectionVariables.set('orderId2',  String(j.data.orderId));",
+                "  console.log('Order 2 assigned to: ' + j.data.deliveryPartnerName + ' | ETA: ' + j.data.expectedDeliveryTime + ' | busy: ' + j.data.isPartnerBusy);",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c2Token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId2}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId2}}" }] },
+                "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId1}},\n  \"deliveryLocationLatitude\": 12.9650,\n  \"deliveryLocationLongitude\": 77.6000,\n  \"items\": [\n    { \"itemId\": {{itemId4}}, \"quantity\": 3 }\n  ]\n}" }
+              }
+            },
+
+            {
+              "name": "Order 3 — customer3 → vendor2, item1×1 + item2×2 (5.5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data) {",
+                "  pm.collectionVariables.set('assignId3', String(j.data.id));",
+                "  pm.collectionVariables.set('orderId3',  String(j.data.orderId));",
+                "  console.log('Order 3 assigned to: ' + j.data.deliveryPartnerName + ' | ETA: ' + j.data.expectedDeliveryTime + ' | busy: ' + j.data.isPartnerBusy);",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c3Token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId3}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId3}}" }] },
+                "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId2}},\n  \"deliveryLocationLatitude\": 12.9800,\n  \"deliveryLocationLongitude\": 77.5700,\n  \"items\": [\n    { \"itemId\": {{itemId1}}, \"quantity\": 1 },\n    { \"itemId\": {{itemId2}}, \"quantity\": 2 }\n  ]\n}" }
+              }
+            },
+
+            {
+              "name": "Order 4 — customer1 → vendor2, item6×1 (8 kg) [will be CANCELLED]",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data) {",
+                "  pm.collectionVariables.set('assignId4', String(j.data.id));",
+                "  pm.collectionVariables.set('orderId4',  String(j.data.orderId));",
+                "  console.log('Order 4 assigned to: ' + j.data.deliveryPartnerName + ' | will be cancelled');",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId1}}" }] },
+                "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId2}},\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": [\n    { \"itemId\": {{itemId6}}, \"quantity\": 1 }\n  ]\n}" }
+              }
+            },
+
+            {
+              "name": "Order 5 — customer2 → vendor3, item3×1 (10 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data) {",
+                "  pm.collectionVariables.set('assignId5', String(j.data.id));",
+                "  pm.collectionVariables.set('orderId5',  String(j.data.orderId));",
+                "  console.log('Order 5 assigned to: ' + j.data.deliveryPartnerName + ' | busy: ' + j.data.isPartnerBusy);",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c2Token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId2}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId2}}" }] },
+                "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId3}},\n  \"deliveryLocationLatitude\": 12.9650,\n  \"deliveryLocationLongitude\": 77.6000,\n  \"items\": [\n    { \"itemId\": {{itemId3}}, \"quantity\": 1 }\n  ]\n}" }
+              }
+            },
+
+            {
+              "name": "Order 6 — customer3 → vendor1, item1×1 + item4×2 (3.5 kg)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data) {",
+                "  pm.collectionVariables.set('assignId6', String(j.data.id));",
+                "  pm.collectionVariables.set('orderId6',  String(j.data.orderId));",
+                "  console.log('Order 6 assigned to: ' + j.data.deliveryPartnerName + ' | busy: ' + j.data.isPartnerBusy);",
+                "}"
+              ]}}],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{c3Token}}" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId3}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId3}}" }] },
+                "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId1}},\n  \"deliveryLocationLatitude\": 12.9720,\n  \"deliveryLocationLongitude\": 77.5950,\n  \"items\": [\n    { \"itemId\": {{itemId1}}, \"quantity\": 1 },\n    { \"itemId\": {{itemId4}}, \"quantity\": 2 }\n  ]\n}" }
+              }
             }
-          }
+
+          ]
         },
+
         {
-          "name": "Update Assignment Status - COLLECTED",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/assignments/1/status?newStatus=COLLECTED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","assignments","1","status"],
-              "query": [{ "key": "newStatus", "value": "COLLECTED" }]
-            }
-          }
+          "name": "2.2 Order 1 — Full Delivery Lifecycle (DELIVERED)",
+          "item": [
+            { "name": "Order 1 — Verify ASSIGNED",       "request": { "method": "GET",   "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/{{orderId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders","{{orderId1}}"] } } },
+            { "name": "Order 1 — Assignment details",    "request": { "method": "GET",   "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId1}}", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId1}}"] } } },
+            { "name": "Order 1 — EN_ROUTE_TO_VENDOR",    "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId1}}/status?newStatus=EN_ROUTE_TO_VENDOR", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId1}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_VENDOR" }] } } },
+            { "name": "Order 1 — COLLECTED",             "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId1}}/status?newStatus=COLLECTED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId1}}","status"], "query": [{ "key": "newStatus", "value": "COLLECTED" }] } } },
+            { "name": "Order 1 — EN_ROUTE_TO_CUSTOMER",  "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId1}}/status?newStatus=EN_ROUTE_TO_CUSTOMER", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId1}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_CUSTOMER" }] } } },
+            {
+              "name": "Order 1 — DELIVERED (triggers history)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "console.log('Order 1 delivered. History should now exist for the assigned partner.');"
+              ]}}],
+              "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId1}}/status?newStatus=DELIVERED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId1}}","status"], "query": [{ "key": "newStatus", "value": "DELIVERED" }] } }
+            },
+            { "name": "Order 1 — Verify order status DELIVERED", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/{{orderId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders","{{orderId1}}"] } } }
+          ]
         },
+
         {
-          "name": "Update Assignment Status - EN_ROUTE_TO_CUSTOMER",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/assignments/1/status?newStatus=EN_ROUTE_TO_CUSTOMER",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","assignments","1","status"],
-              "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_CUSTOMER" }]
-            }
-          }
+          "name": "2.3 Order 2 — Full Delivery Lifecycle (DELIVERED)",
+          "item": [
+            { "name": "Order 2 — EN_ROUTE_TO_VENDOR",   "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId2}}/status?newStatus=EN_ROUTE_TO_VENDOR", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId2}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_VENDOR" }] } } },
+            { "name": "Order 2 — COLLECTED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId2}}/status?newStatus=COLLECTED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId2}}","status"], "query": [{ "key": "newStatus", "value": "COLLECTED" }] } } },
+            { "name": "Order 2 — EN_ROUTE_TO_CUSTOMER", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId2}}/status?newStatus=EN_ROUTE_TO_CUSTOMER", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId2}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_CUSTOMER" }] } } },
+            { "name": "Order 2 — DELIVERED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId2}}/status?newStatus=DELIVERED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId2}}","status"], "query": [{ "key": "newStatus", "value": "DELIVERED" }] } } }
+          ]
         },
+
         {
-          "name": "Update Assignment Status - DELIVERED",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/assignments/1/status?newStatus=DELIVERED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","assignments","1","status"],
-              "query": [{ "key": "newStatus", "value": "DELIVERED" }]
-            }
-          }
+          "name": "2.4 Order 3 — Full Delivery Lifecycle (DELIVERED)",
+          "item": [
+            { "name": "Order 3 — EN_ROUTE_TO_VENDOR",   "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId3}}/status?newStatus=EN_ROUTE_TO_VENDOR", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId3}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_VENDOR" }] } } },
+            { "name": "Order 3 — COLLECTED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId3}}/status?newStatus=COLLECTED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId3}}","status"], "query": [{ "key": "newStatus", "value": "COLLECTED" }] } } },
+            { "name": "Order 3 — EN_ROUTE_TO_CUSTOMER", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId3}}/status?newStatus=EN_ROUTE_TO_CUSTOMER", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId3}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_CUSTOMER" }] } } },
+            { "name": "Order 3 — DELIVERED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId3}}/status?newStatus=DELIVERED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId3}}","status"], "query": [{ "key": "newStatus", "value": "DELIVERED" }] } } }
+          ]
         },
+
         {
-          "name": "Update Assignment Status - CANCELLED",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/assignments/1/status?newStatus=CANCELLED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","assignments","1","status"],
-              "query": [{ "key": "newStatus", "value": "CANCELLED" }]
-            }
-          }
+          "name": "2.5 Order 4 — Cancel Mid-Delivery",
+          "item": [
+            { "name": "Order 4 — EN_ROUTE_TO_VENDOR", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId4}}/status?newStatus=EN_ROUTE_TO_VENDOR", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId4}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_VENDOR" }] } } },
+            {
+              "name": "Order 4 — CANCELLED (triggers history with CANCELLED status)",
+              "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId4}}/status?newStatus=CANCELLED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId4}}","status"], "query": [{ "key": "newStatus", "value": "CANCELLED" }] } }
+            },
+            { "name": "Order 4 — Verify order status CANCELLED", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/{{orderId4}}", "host": ["{{baseUrl}}"], "path": ["api","orders","{{orderId4}}"] } } }
+          ]
         },
+
         {
-          "name": "Update Assignment Status - FAILED",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": {
-              "raw": "{{baseUrl}}/api/assignments/1/status?newStatus=FAILED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api","assignments","1","status"],
-              "query": [{ "key": "newStatus", "value": "FAILED" }]
-            }
-          }
+          "name": "2.6 Orders 5 & 6 — Deliver",
+          "item": [
+            { "name": "Order 5 — EN_ROUTE_TO_VENDOR",   "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId5}}/status?newStatus=EN_ROUTE_TO_VENDOR", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId5}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_VENDOR" }] } } },
+            { "name": "Order 5 — COLLECTED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId5}}/status?newStatus=COLLECTED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId5}}","status"], "query": [{ "key": "newStatus", "value": "COLLECTED" }] } } },
+            { "name": "Order 5 — EN_ROUTE_TO_CUSTOMER", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId5}}/status?newStatus=EN_ROUTE_TO_CUSTOMER", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId5}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_CUSTOMER" }] } } },
+            { "name": "Order 5 — DELIVERED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId5}}/status?newStatus=DELIVERED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId5}}","status"], "query": [{ "key": "newStatus", "value": "DELIVERED" }] } } },
+            { "name": "Order 6 — EN_ROUTE_TO_VENDOR",   "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId6}}/status?newStatus=EN_ROUTE_TO_VENDOR", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId6}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_VENDOR" }] } } },
+            { "name": "Order 6 — COLLECTED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId6}}/status?newStatus=COLLECTED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId6}}","status"], "query": [{ "key": "newStatus", "value": "COLLECTED" }] } } },
+            { "name": "Order 6 — EN_ROUTE_TO_CUSTOMER", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId6}}/status?newStatus=EN_ROUTE_TO_CUSTOMER", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId6}}","status"], "query": [{ "key": "newStatus", "value": "EN_ROUTE_TO_CUSTOMER" }] } } },
+            { "name": "Order 6 — DELIVERED",            "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId6}}/status?newStatus=DELIVERED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId6}}","status"], "query": [{ "key": "newStatus", "value": "DELIVERED" }] } } }
+          ]
         }
+
       ]
     },
 
     {
-      "name": "History",
+      "name": "Phase 3 — History & Ratings",
+      "description": "After deliveries are complete, read history records and post ratings for partners and vendors.",
       "item": [
+
         {
-          "name": "Get Delivery Partner History",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/history/partners/1", "host": ["{{baseUrl}}"], "path": ["api","history","partners","1"] }
-          }
-        },
-        {
-          "name": "Get Partner History Record by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/history/partners/records/1", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","1"] }
-          }
-        },
-        {
-          "name": "Rate Delivery (Partner)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/history/partners/records/1/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","1","rate"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rating\": 4.5\n}"
+          "name": "3.1 Read History",
+          "item": [
+            { "name": "History — Partner 1 all records",      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/partners/{{partnerId1}}", "host": ["{{baseUrl}}"], "path": ["api","history","partners","{{partnerId1}}"] } } },
+            { "name": "History — Partner 2 all records",      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/partners/{{partnerId2}}", "host": ["{{baseUrl}}"], "path": ["api","history","partners","{{partnerId2}}"] } } },
+            { "name": "History — Partner 3 all records",      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/partners/{{partnerId3}}", "host": ["{{baseUrl}}"], "path": ["api","history","partners","{{partnerId3}}"] } } },
+            { "name": "History — Partner 4 all records",      "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/partners/{{partnerId4}}", "host": ["{{baseUrl}}"], "path": ["api","history","partners","{{partnerId4}}"] } } },
+            { "name": "History — Vendor 1 all records",       "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/{{vendorId1}}", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","{{vendorId1}}"] } } },
+            { "name": "History — Vendor 2 all records",       "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/{{vendorId2}}", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","{{vendorId2}}"] } } },
+            { "name": "History — Vendor 3 all records",       "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/{{vendorId3}}", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","{{vendorId3}}"] } } },
+
+            {
+              "name": "History — Partner record 1 (capture histPartner1)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('histPartner1', String(j.data.id));"
+              ]}}],
+              "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/1", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","1"] } }
+            },
+            {
+              "name": "History — Vendor record 1 (capture histVendor1)",
+              "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "var j = pm.response.json();",
+                "if (j.data && j.data.id) pm.collectionVariables.set('histVendor1', String(j.data.id));"
+              ]}}],
+              "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/records/1", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","1"] } }
             }
-          }
+          ]
         },
+
         {
-          "name": "Get Vendor History",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/history/vendors/1", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","1"] }
-          }
+          "name": "3.2 Rate Partners",
+          "description": "Rate history records 1–5 (order 4 was CANCELLED, so record 4 cannot be rated)",
+          "item": [
+            { "name": "Rate Partner record 1 — 5.0",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/1/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","1","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 5.0 }" } } },
+            { "name": "Rate Partner record 2 — 4.5",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/2/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","2","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 4.5 }" } } },
+            { "name": "Rate Partner record 3 — 4.0",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/3/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","3","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 4.0 }" } } },
+            { "name": "Rate Partner record 5 — 3.5",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/5/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","5","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 3.5 }" } } },
+            { "name": "Rate Partner record 6 — 4.8",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/6/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","6","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 4.8 }" } } }
+          ]
         },
+
         {
-          "name": "Get Vendor History Record by ID",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": { "raw": "{{baseUrl}}/api/history/vendors/records/1", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","1"] }
-          }
-        },
-        {
-          "name": "Rate Vendor",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}" },
-              { "key": "Content-Type",   "value": "application/json" }
-            ],
-            "url": { "raw": "{{baseUrl}}/api/history/vendors/records/1/rate", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","1","rate"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"rating\": 4.0\n}"
-            }
-          }
+          "name": "3.3 Rate Vendors",
+          "item": [
+            { "name": "Rate Vendor record 1 — 4.5",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/records/1/rate", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","1","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 4.5 }" } } },
+            { "name": "Rate Vendor record 2 — 4.0",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/records/2/rate", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","2","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 4.0 }" } } },
+            { "name": "Rate Vendor record 3 — 5.0",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/records/3/rate", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","3","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 5.0 }" } } },
+            { "name": "Rate Vendor record 5 — 3.0",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/records/5/rate", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","5","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 3.0 }" } } },
+            { "name": "Rate Vendor record 6 — 4.2",  "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/vendors/records/6/rate", "host": ["{{baseUrl}}"], "path": ["api","history","vendors","records","6","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 4.2 }" } } }
+          ]
         }
+
+      ]
+    },
+
+    {
+      "name": "Phase 4 — Query & Read APIs",
+      "description": "Read-only GET calls to verify data is correct after all mutations.",
+      "item": [
+
+        { "name": "Get All Active Vendors",              "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors", "host": ["{{baseUrl}}"], "path": ["api","vendors"] } } },
+        { "name": "Get Vendor 1 by ID",                 "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}"] } } },
+        { "name": "Get Vendor 2 by ID",                 "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId2}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId2}}"] } } },
+        { "name": "Get Vendor 3 by ID",                 "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId3}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId3}}"] } } },
+
+        { "name": "Get All Active Delivery Partners",   "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/users/delivery-partners", "host": ["{{baseUrl}}"], "path": ["api","users","delivery-partners"] } } },
+        { "name": "Get Partner 1 by ID",                "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/users/{{partnerId1}}", "host": ["{{baseUrl}}"], "path": ["api","users","{{partnerId1}}"] } } },
+        { "name": "Get Partner 2 by ID",                "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/users/{{partnerId2}}", "host": ["{{baseUrl}}"], "path": ["api","users","{{partnerId2}}"] } } },
+
+        { "name": "Get Customer 1 by ID",               "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/customers/{{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","customers","{{customerId1}}"] } } },
+        { "name": "Get Customer 2 by ID",               "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/customers/{{customerId2}}", "host": ["{{baseUrl}}"], "path": ["api","customers","{{customerId2}}"] } } },
+
+        { "name": "Orders — filter by DELIVERED",       "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders?status=DELIVERED", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "status", "value": "DELIVERED" }] } } },
+        { "name": "Orders — filter by CANCELLED",       "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders?status=CANCELLED", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "status", "value": "CANCELLED" }] } } },
+        { "name": "Orders — filter by ASSIGNED",        "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders?status=ASSIGNED", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "status", "value": "ASSIGNED" }] } } },
+        { "name": "Orders — by Customer 1",             "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/customer/{{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders","customer","{{customerId1}}"] } } },
+        { "name": "Orders — by Customer 2",             "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/customer/{{customerId2}}", "host": ["{{baseUrl}}"], "path": ["api","orders","customer","{{customerId2}}"] } } },
+        { "name": "Orders — by Vendor 1",               "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/vendor/{{vendorId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders","vendor","{{vendorId1}}"] } } },
+        { "name": "Orders — by Vendor 2",               "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/vendor/{{vendorId2}}", "host": ["{{baseUrl}}"], "path": ["api","orders","vendor","{{vendorId2}}"] } } },
+
+        { "name": "Assignments — by Partner 1",         "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/partner/{{partnerId1}}", "host": ["{{baseUrl}}"], "path": ["api","assignments","partner","{{partnerId1}}"] } } },
+        { "name": "Assignments — by Vendor 1",          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/vendor/{{vendorId1}}", "host": ["{{baseUrl}}"], "path": ["api","assignments","vendor","{{vendorId1}}"] } } },
+        { "name": "Assignment — by Order 1",            "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/order/{{orderId1}}", "host": ["{{baseUrl}}"], "path": ["api","assignments","order","{{orderId1}}"] } } },
+
+        { "name": "Update Partner 1 Location",          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{p1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/users/{{partnerId1}}/location", "host": ["{{baseUrl}}"], "path": ["api","users","{{partnerId1}}","location"] }, "body": { "mode": "raw", "raw": "{\n  \"latitude\": 12.9400,\n  \"longitude\": 77.6200\n}" } } },
+        { "name": "Toggle Partner 2 Unavailable",       "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{p2Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/users/{{partnerId2}}/availability", "host": ["{{baseUrl}}"], "path": ["api","users","{{partnerId2}}","availability"] }, "body": { "mode": "raw", "raw": "{\n  \"isAvailable\": false\n}" } } },
+        { "name": "Toggle Partner 2 Available Again",   "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{p2Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/users/{{partnerId2}}/availability", "host": ["{{baseUrl}}"], "path": ["api","users","{{partnerId2}}","availability"] }, "body": { "mode": "raw", "raw": "{\n  \"isAvailable\": true\n}" } } },
+        { "name": "Update Customer 1 Location",         "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/customers/{{customerId1}}/location", "host": ["{{baseUrl}}"], "path": ["api","customers","{{customerId1}}","location"] }, "body": { "mode": "raw", "raw": "{\n  \"latitude\": 12.9800,\n  \"longitude\": 77.5900\n}" } } },
+        { "name": "Update Vendor 1 Location",           "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/location", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","location"] }, "body": { "mode": "raw", "raw": "{\n  \"latitude\": 12.9510,\n  \"longitude\": 77.6110\n}" } } }
+
+      ]
+    },
+
+    {
+      "name": "Phase 5 — Edge Cases & Error Scenarios",
+      "description": "These requests deliberately hit error paths. Expected HTTP status codes are noted in each request name.",
+      "item": [
+
+        {
+          "name": "5.1 Registration Errors",
+          "item": [
+            {
+              "name": "Register — invalid email format (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }, "body": { "mode": "raw", "raw": "{\n  \"email\": \"not-an-email\",\n  \"username\": \"badreg1\",\n  \"password\": \"password123\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9999999999\",\n  \"latitude\": null,\n  \"longitude\": null\n}" } }
+            },
+            {
+              "name": "Register — password too short (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }, "body": { "mode": "raw", "raw": "{\n  \"email\": \"shortpass@test.com\",\n  \"username\": \"shortpassuser\",\n  \"password\": \"abc\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9999999998\",\n  \"latitude\": null,\n  \"longitude\": null\n}" } }
+            },
+            {
+              "name": "Register — duplicate email (expect 409)",
+              "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }, "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer1@example.com\",\n  \"username\": \"duplicateuser\",\n  \"password\": \"password123\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9999999997\",\n  \"latitude\": null,\n  \"longitude\": null\n}" } }
+            },
+            {
+              "name": "Register — duplicate username (expect 409)",
+              "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }, "body": { "mode": "raw", "raw": "{\n  \"email\": \"unique@test.com\",\n  \"username\": \"customer1\",\n  \"password\": \"password123\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9999999996\",\n  \"latitude\": null,\n  \"longitude\": null\n}" } }
+            },
+            {
+              "name": "Register — vendor without lat/lon (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] }, "body": { "mode": "raw", "raw": "{\n  \"email\": \"vendor_noloc@test.com\",\n  \"username\": \"vendornoloc\",\n  \"password\": \"password123\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9999999995\",\n  \"latitude\": null,\n  \"longitude\": null\n}" } }
+            }
+          ]
+        },
+
+        {
+          "name": "5.2 Login Errors",
+          "item": [
+            {
+              "name": "Login — wrong password (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }, "body": { "mode": "raw", "raw": "{\n  \"email\": \"customer1@example.com\",\n  \"password\": \"wrongpassword\"\n}" } }
+            },
+            {
+              "name": "Login — non-existent email (expect 404)",
+              "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] }, "body": { "mode": "raw", "raw": "{\n  \"email\": \"nobody@nowhere.com\",\n  \"password\": \"password123\"\n}" } }
+            }
+          ]
+        },
+
+        {
+          "name": "5.3 Order Errors",
+          "item": [
+            {
+              "name": "Order — empty items list (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId1}}" }] }, "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId1}},\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": []\n}" } }
+            },
+            {
+              "name": "Order — item not stocked by vendor (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId1}}" }] }, "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId1}},\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": [\n    { \"itemId\": {{itemId6}}, \"quantity\": 1 }\n  ]\n}" } }
+            },
+            {
+              "name": "Order — quantity exceeds stock (expect 422)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId1}}" }] }, "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId1}},\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": [\n    { \"itemId\": {{itemId1}}, \"quantity\": 99999 }\n  ]\n}" } }
+            },
+            {
+              "name": "Order — non-existent customer (expect 404)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/orders?customerId=99999", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "99999" }] }, "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId1}},\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": [\n    { \"itemId\": {{itemId1}}, \"quantity\": 1 }\n  ]\n}" } }
+            }
+          ]
+        },
+
+        {
+          "name": "5.4 Assignment Status Transition Errors",
+          "item": [
+            {
+              "name": "Re-deliver order 1 (already DELIVERED — expect 400)",
+              "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/assignments/{{assignId1}}/status?newStatus=DELIVERED", "host": ["{{baseUrl}}"], "path": ["api","assignments","{{assignId1}}","status"], "query": [{ "key": "newStatus", "value": "DELIVERED" }] } }
+            },
+            {
+              "name": "Rate cancelled delivery (record 4, expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/4/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","4","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 3.0 }" } }
+            },
+            {
+              "name": "Rate already-rated record 1 again (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/1/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","1","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 2.0 }" } }
+            },
+            {
+              "name": "Rating out of range (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/history/partners/records/2/rate", "host": ["{{baseUrl}}"], "path": ["api","history","partners","records","2","rate"] }, "body": { "mode": "raw", "raw": "{ \"rating\": 6.0 }" } }
+            }
+          ]
+        },
+
+        {
+          "name": "5.5 Get Non-Existent Resources (expect 404)",
+          "item": [
+            { "name": "Get vendor ID 99999 (expect 404)",  "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/99999", "host": ["{{baseUrl}}"], "path": ["api","vendors","99999"] } } },
+            { "name": "Get item ID 99999 (expect 404)",    "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/items/99999", "host": ["{{baseUrl}}"], "path": ["api","items","99999"] } } },
+            { "name": "Get order ID 99999 (expect 404)",   "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/orders/99999", "host": ["{{baseUrl}}"], "path": ["api","orders","99999"] } } },
+            { "name": "Get partner ID 99999 (expect 404)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/users/99999", "host": ["{{baseUrl}}"], "path": ["api","users","99999"] } } }
+          ]
+        },
+
+        {
+          "name": "5.6 Deactivate & Verify Exclusion",
+          "item": [
+            {
+              "name": "Deactivate Vendor 3",
+              "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId3}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId3}}"] } }
+            },
+            {
+              "name": "Order against deactivated Vendor 3 (expect 400)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{c1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/orders?customerId={{customerId1}}", "host": ["{{baseUrl}}"], "path": ["api","orders"], "query": [{ "key": "customerId", "value": "{{customerId1}}" }] }, "body": { "mode": "raw", "raw": "{\n  \"vendorId\": {{vendorId3}},\n  \"deliveryLocationLatitude\": 12.9716,\n  \"deliveryLocationLongitude\": 77.5946,\n  \"items\": [\n    { \"itemId\": {{itemId3}}, \"quantity\": 1 }\n  ]\n}" } }
+            },
+            {
+              "name": "Deactivate Partner 4",
+              "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/users/{{partnerId4}}", "host": ["{{baseUrl}}"], "path": ["api","users","{{partnerId4}}"] } }
+            },
+            {
+              "name": "Get All Partners — partner 4 should be absent",
+              "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/users/delivery-partners", "host": ["{{baseUrl}}"], "path": ["api","users","delivery-partners"] } }
+            }
+          ]
+        },
+
+        {
+          "name": "5.7 Stock Management Edge Cases",
+          "item": [
+            {
+              "name": "Update Vendor 1 stock for Item 1 (add more)",
+              "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }, { "key": "Content-Type", "value": "application/json" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store"] }, "body": { "mode": "raw", "raw": "{\n  \"itemId\": {{itemId1}},\n  \"quantity\": 200\n}" } }
+            },
+            {
+              "name": "Remove Item 5 from Vendor 1 stock",
+              "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store/items/{{itemId5}}", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store","items","{{itemId5}}"] } }
+            },
+            {
+              "name": "Remove non-existent stock entry (expect 404)",
+              "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{v1Token}}" }], "url": { "raw": "{{baseUrl}}/api/vendors/{{vendorId1}}/store/items/99999", "host": ["{{baseUrl}}"], "path": ["api","vendors","{{vendorId1}}","store","items","99999"] } }
+            },
+            {
+              "name": "Delete Item 6 from catalogue",
+              "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": { "raw": "{{baseUrl}}/api/items/{{itemId6}}", "host": ["{{baseUrl}}"], "path": ["api","items","{{itemId6}}"] } }
+            }
+          ]
+        }
+
       ]
     }
 

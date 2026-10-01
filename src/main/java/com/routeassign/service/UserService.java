@@ -2,6 +2,8 @@ package com.routeassign.service;
 
 import com.routeassign.dto.request.UpdateAvailabilityRequest;
 import com.routeassign.dto.request.UpdateLocationRequest;
+import com.routeassign.dto.response.LeaderboardEntryResponse;
+import com.routeassign.dto.response.PartnerDashboardResponse;
 import com.routeassign.dto.response.UserDetailsResponse;
 
 import java.util.List;
@@ -37,4 +39,19 @@ public interface UserService {
      * Soft-deletes (deactivates) a user account.
      */
     void deactivate(Long id);
+
+    /**
+     * Returns a partner's personal dashboard: live workload, capacity snapshot,
+     * active assignments, and career delivery totals.
+     * Intended for GET /api/users/{id}/dashboard
+     */
+    PartnerDashboardResponse getPartnerDashboard(Long id);
+
+    /**
+     * Returns the delivery partner leaderboard sorted by rating descending,
+     * then by completed deliveries descending.
+     * Only active partners are included.
+     * {@code limit} caps the number of entries (0 or negative means return all).
+     */
+    List<LeaderboardEntryResponse> getLeaderboard(int limit);
 }

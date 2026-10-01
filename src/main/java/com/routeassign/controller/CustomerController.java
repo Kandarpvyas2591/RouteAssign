@@ -9,12 +9,25 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
 public class CustomerController {
 
     private final CustomerService customerService;
+
+    /**
+     * GET /api/customers
+     * List all customers in the system (admin view).
+     *
+     * Response: 200 OK — List<CustomerDetailsResponse>
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<CustomerDetailsResponse>>> getAll() {
+        return ResponseEntity.ok(ApiResponse.success(customerService.getAll()));
+    }
 
     /**
      * GET /api/customers/{id}
@@ -43,5 +56,18 @@ public class CustomerController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateLocationRequest request) {
         return ResponseEntity.ok(ApiResponse.success(customerService.updateLocation(id, request)));
+    }
+
+    /**
+     * DELETE /api/customers/{id}
+     * Soft-deactivates a customer account.
+     * Sets isActive = false on UserAuth — the account can no longer log in.
+     *
+     * Response: 200 OK — "Customer deactivated"
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
+        customerService.deactivate(id);
+        return ResponseEntity.ok(ApiResponse.success("Customer deactivated", null));
     }
 }

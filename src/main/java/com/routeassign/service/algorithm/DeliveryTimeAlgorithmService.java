@@ -45,4 +45,32 @@ public interface DeliveryTimeAlgorithmService {
      * @return the LocalDateTime from which delivery work can begin
      */
     LocalDateTime determineWorkStartTime(LocalDateTime assignmentTime, double distancePartnerToVendor);
+
+    /**
+     * Calculates the expected delivery time for a BUSY partner (cross-vendor reuse).
+     *
+     * A busy partner is currently mid-delivery for a different vendor.
+     * The system cannot assign them immediately — they must finish their current
+     * delivery, travel home, rest, and only then start the new delivery.
+     *
+     * ETA formula:
+     * <pre>
+     *   restReadyTime  = currentDeliveryEta + partnerRestDurationMinutes
+     *   workStartTime  = snap restReadyTime to next valid working window
+     *                    (apply after-5PM / 30-km rule from restReadyTime)
+     *   deliveryETA    = scheduleWithinWorkingHours(workStartTime,
+     *                        travelTime(home→vendor) + travelTime(vendor→customer))
+     * </pre>
+     *
+     * @param currentDeliveryEta       when the partner's current active delivery is expected to finish
+     * @param restDurationMinutes      minutes the partner rests at home before the next delivery
+     * @param distancePartnerToVendor  distance (km) from partner home to the new order's vendor
+     * @param distanceVendorToCustomer distance (km) from vendor to the new order's customer
+     * @return the expected delivery LocalDateTime for the new order
+     */
+    LocalDateTime calculateEtaForBusyPartner(
+            LocalDateTime currentDeliveryEta,
+            int           restDurationMinutes,
+            double        distancePartnerToVendor,
+            double        distanceVendorToCustomer);
 }

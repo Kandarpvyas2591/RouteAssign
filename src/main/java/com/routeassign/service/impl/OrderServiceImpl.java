@@ -134,7 +134,22 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public List<OrderResponse> getByCustomerIdAndStatus(Long customerId, OrderStatus status) {
+        return orderRepository.findAllByCustomer_IdAndOrderStatus(customerId, status)
+                .stream().map(this::toResponse).toList();
+    }
+
+    @Override
+    public List<OrderResponse> getByVendorIdAndStatus(Long vendorId, OrderStatus status) {
+        return orderRepository.findAllByVendor_IdAndOrderStatus(vendorId, status)
+                .stream().map(this::toResponse).toList();
+    }
+
+    @Override
     public List<OrderResponse> getByStatus(OrderStatus status) {
+        if (status == null) {
+            return orderRepository.findAll().stream().map(this::toResponse).toList();
+        }
         return orderRepository.findAllByOrderStatus(status)
                 .stream().map(this::toResponse).toList();
     }

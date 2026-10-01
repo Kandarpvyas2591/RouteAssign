@@ -5,6 +5,7 @@ import com.routeassign.domain.entity.UserAuth;
 import com.routeassign.domain.entity.UserDetails;
 import com.routeassign.domain.entity.VendorDetails;
 import com.routeassign.domain.enums.UserRole;
+import com.routeassign.dto.request.ChangePasswordRequest;
 import com.routeassign.dto.request.LoginRequest;
 import com.routeassign.dto.request.RegisterRequest;
 import com.routeassign.dto.response.AuthResponse;
@@ -145,5 +146,29 @@ public class AuthServiceImpl implements AuthService {
                 .email(auth.getEmail())
                 .role(auth.getRole())
                 .build();
+    }
+
+    // ── Change password ───────────────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        UserAuth auth = userAuthRepository.findById(request.getAuthUserId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User", "id", request.getAuthUserId()));
+
+        if (!auth.getIsActive()) {
+            throw new BadRequestException("This account has been deactivated.");
+        }
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), auth.getPassword())) {
+            throw new BadRequestException("Current password is incorrect.");
+        }
+
+        auth.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        auth.setPasswordResetAt(java.time.LocalDateTime.now());
+        userAuthRepository.save(auth);
+
+        log.info("Password changed for userId={}", auth.getUserId());
     }
 }
