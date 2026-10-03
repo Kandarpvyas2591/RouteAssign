@@ -33,10 +33,10 @@ public class DashboardStatsResponse {
 
     // ── Live delivery health ──────────────────────────────────────────────────
     private long liveAssignments;             // non-terminal assignments right now
-    private long assignedAssignments;
-    private long enRouteToVendorAssignments;
-    private long collectedAssignments;
-    private long enRouteToCustomerAssignments;
+    private long assignedAssignments;         // status = ASSIGNED (awaiting acceptance)
+    private long acceptedAssignments;         // status = ACCEPTED  (travelling to vendor)
+    private long pickedUpAssignments;         // status = PICKED_UP (at vendor, collected)
+    private long inTransitAssignments;        // status = IN_TRANSIT (en route to customer)
 
     // ── Capacity snapshot ─────────────────────────────────────────────────────
     private double totalSystemCapacityKg;     // sum of all active partner capacity

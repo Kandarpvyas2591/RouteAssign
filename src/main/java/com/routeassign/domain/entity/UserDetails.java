@@ -69,6 +69,21 @@ public class UserDetails {
     @Column(name = "rating")
     private Double rating;
 
+    /**
+     * Optimistic locking version counter.
+     *
+     * Incremented by Hibernate on every UPDATE to this row.  If two transactions
+     * both read the same version and one commits first, the other will receive a
+     * {@link jakarta.persistence.OptimisticLockException} on flush, preventing
+     * silent data corruption (e.g. two orders both adding weight simultaneously).
+     *
+     * This is the second layer of concurrency protection, complementing the
+     * pessimistic row lock acquired in the final assignment step.
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
     @PrePersist
     protected void onCreate() {
         if (this.isActive == null) this.isActive = true;

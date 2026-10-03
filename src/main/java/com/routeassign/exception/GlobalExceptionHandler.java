@@ -65,6 +65,13 @@ public class GlobalExceptionHandler {
 
     // ── 422 Unprocessable Entity ──────────────────────────────────────────────
 
+    @ExceptionHandler(InvalidRuleException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRule(
+            InvalidRuleException ex, HttpServletRequest request) {
+        log.warn("Invalid rule value: {}", ex.getMessage());
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(InsufficientCapacityException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientCapacity(
             InsufficientCapacityException ex, HttpServletRequest request) {

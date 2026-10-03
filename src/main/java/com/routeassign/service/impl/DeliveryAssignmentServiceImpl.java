@@ -1,27 +1,47 @@
 package com.routeassign.service.impl;
 
 import com.routeassign.domain.entity.*;
+import com.routeassign.domain.enums.AssignmentFailureReason;
 import com.routeassign.domain.enums.DeliveryStatus;
 import com.routeassign.domain.enums.HistoryStatus;
 import com.routeassign.dto.response.DeliveryAssignmentResponse;
 import com.routeassign.dto.response.ReassignResponse;
+import com.routeassign.exception.AssignmentAttemptException;
 import com.routeassign.exception.BadRequestException;
 import com.routeassign.exception.InvalidStatusTransitionException;
 import com.routeassign.exception.NoEligiblePartnerException;
 import com.routeassign.exception.ResourceNotFoundException;
 import com.routeassign.repository.*;
 import com.routeassign.service.DeliveryAssignmentService;
+import com.routeassign.service.algorithm.AssignmentContext;
 import com.routeassign.service.algorithm.DistanceAlgorithmService;
 import com.routeassign.service.algorithm.PartnerSelectionAlgorithmService;
+import com.routeassign.service.algorithm.PartnerSelectionAlgorithmService.ScoredCandidate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Orchestrates the full assignment lifecycle from the service layer.
+ *
+ * Concurrency safety (Phase 6):
+ *   - Idempotency guard prevents duplicate assignments for the same order.
+ *   - Pessimistic row lock on the selected partner prevents two concurrent
+ *     requests from simultaneously assigning the same partner beyond capacity.
+ *   - Lock-then-recheck: after acquiring the lock, eligibility is re-validated
+ *     against the freshly-read partner state.
+ *
+ * Side-effects on terminal transitions (history, partner weight, availability)
+ * are handled exclusively by {@link AssignmentClosingHelper}.
+ *
+ * Response mapping is handled exclusively by {@link AssignmentResponseMapper}.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,110 +49,205 @@ public class DeliveryAssignmentServiceImpl implements DeliveryAssignmentService 
 
     private final DeliveryAssignmentRepository     deliveryAssignmentRepository;
     private final UserDetailsRepository            userDetailsRepository;
-    private final HistoryDeliveryPartnerRepository historyDeliveryPartnerRepository;
-    private final HistoryVendorRepository          historyVendorRepository;
     private final PartnerSelectionAlgorithmService partnerSelectionAlgorithmService;
     private final DistanceAlgorithmService         distanceAlgorithmService;
+    private final AssignmentClosingHelper          closingHelper;
 
-    /** Statuses that are considered terminal — the delivery is over. */
-    private static final Set<DeliveryStatus> TERMINAL =
-            Set.of(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED, DeliveryStatus.FAILED);
+    /**
+     * Terminal statuses — no further lifecycle transitions are possible.
+     * Aligned with {@link AssignmentLifecycleServiceImpl#CLOSING_STATUSES}.
+     */
+    private static final Set<DeliveryStatus> TERMINAL = Set.of(
+            DeliveryStatus.DELIVERED,
+            DeliveryStatus.CANCELLED,
+            DeliveryStatus.DELIVERY_FAILED,
+            DeliveryStatus.REJECTED,
+            DeliveryStatus.EXPIRED,
+            DeliveryStatus.WAITING_FOR_PARTNER,
+            DeliveryStatus.FAILED   // legacy
+    );
 
-    // ── assign ────────────────────────────────────────────────────────────────
+    // ── assign — initial attempt ──────────────────────────────────────────────
 
     @Override
     @Transactional
     public DeliveryAssignmentResponse assign(Order order) {
+        return assign(order, new AssignmentContext(order));
+    }
 
-        // Step 1: Run the full selection algorithm — returns partner + pre-computed ETA
-        //         + isBusy flag + workStartTime in a single result object.
+    // ── assign — context-aware (used by reassignment service) ─────────────────
+
+    /**
+     * Concurrency-safe assignment.
+     *
+     * 1. Idempotency guard.
+     * 2. Run full selection algorithm (eligibility → scoring → ranking). No locks yet.
+     * 3. Lock-then-recheck loop over ranked candidates:
+     *    a. Acquire PESSIMISTIC_WRITE on candidate's partner row.
+     *    b. Re-check eligibility on the freshly-read state.
+     *    c. If still eligible → persist assignment, update weight, save audit trail.
+     *    d. If ineligible → throw {@link AssignmentAttemptException}, try next candidate.
+     * 4. If all candidates fail the recheck → throw {@link NoEligiblePartnerException}.
+     */
+    @Override
+    @Transactional
+    public DeliveryAssignmentResponse assign(Order order, AssignmentContext context) {
+
+        // Step 1: idempotency
+        var existing = deliveryAssignmentRepository
+                .findActiveAssignmentByOrderId(order.getOrderId());
+        if (existing.isPresent()) {
+            log.info("Idempotency: orderId={} already has active assignmentId={}",
+                    order.getOrderId(), existing.get().getId());
+            return AssignmentResponseMapper.toResponse(existing.get());
+        }
+
+        // Step 2: selection algorithm (no locks held during scoring)
         PartnerSelectionAlgorithmService.PartnerSelectionResult result =
-                partnerSelectionAlgorithmService.selectPartnerWithEta(order)
+                partnerSelectionAlgorithmService.selectPartnerWithEta(context)
                         .orElseThrow(NoEligiblePartnerException::new);
 
-        UserDetails   partner      = result.partner();
-        LocalDateTime eta          = result.eta();
-        boolean       isBusy       = result.isBusy();
-        LocalDateTime workStart    = result.workStartTime();
-        VendorDetails vendor       = order.getVendor();
+        List<ScoredCandidate> ranked = new ArrayList<>(result.scoredCandidates());
+        ranked.sort((a, b) -> Double.compare(
+                b.scoringResult().getFinalScore(),
+                a.scoringResult().getFinalScore()));
 
-        // Step 2: Calculate distances (needed for audit columns and the response DTO)
-        double distPartnerToVendor = distanceAlgorithmService.calculateDistance(
-                partner.getLatitude(),  partner.getLongitude(),
-                vendor.getLatitude(),   vendor.getLongitude());
+        // Step 3: lock-then-recheck
+        for (ScoredCandidate sc : ranked) {
+            try {
+                return attemptAssignment(order, context, sc, result);
+            } catch (AssignmentAttemptException ex) {
+                log.warn("Partner {} failed post-lock recheck ({}), trying next",
+                        ex.getPartnerId(), ex.getRejectReason());
+            }
+        }
 
-        double distVendorToCustomer = distanceAlgorithmService.calculateDistance(
-                vendor.getLatitude(),   vendor.getLongitude(),
-                order.getDeliveryLocationLatitude(),
-                order.getDeliveryLocationLongitude());
+        log.error("All {} candidates failed post-lock recheck for orderId={}",
+                ranked.size(), order.getOrderId());
+        throw new NoEligiblePartnerException(
+                "No partner could be assigned after " + ranked.size()
+                + " attempt(s) — all candidates lost capacity to concurrent requests.");
+    }
 
-        // Step 3: Persist the assignment — ETA comes directly from the algorithm result,
-        //         so no second ETA calculation is needed here.
+    /**
+     * Critical section: acquire a pessimistic write lock on the partner row,
+     * re-validate eligibility, and — if still eligible — persist everything.
+     *
+     * The lock is released when the surrounding {@code @Transactional} commits.
+     * Only one partner row is ever locked per call; the entire partner table is
+     * never locked.
+     */
+    private DeliveryAssignmentResponse attemptAssignment(
+            Order                                                    order,
+            AssignmentContext                                         context,
+            ScoredCandidate                                          sc,
+            PartnerSelectionAlgorithmService.PartnerSelectionResult  result) {
+
+        Long candidateId = sc.candidate().getPartnerId();
+
+        UserDetails locked = userDetailsRepository
+                .findByIdWithPessimisticLock(candidateId)
+                .orElseThrow(() -> new AssignmentAttemptException(
+                        candidateId, "partner no longer exists"));
+
+        if (!Boolean.TRUE.equals(locked.getIsActive())) {
+            throw new AssignmentAttemptException(candidateId, "partner is no longer active");
+        }
+        double freshRemaining = remainingCapacity(locked);
+        if (freshRemaining < order.getTotalWeight()) {
+            throw new AssignmentAttemptException(candidateId,
+                    "insufficient capacity after lock: remaining=" + freshRemaining
+                    + " required=" + order.getTotalWeight());
+        }
+
+        boolean       isTop      = candidateId.equals(result.partner().getId());
+        LocalDateTime eta        = isTop ? result.eta()           : sc.candidate().getEta();
+        LocalDateTime workStart  = isTop ? result.workStartTime() : sc.candidate().getWorkStartTime();
+        boolean       isBusy     = sc.candidate().isBusy();
+        VendorDetails vendor     = order.getVendor();
+
+        double distP2V = distanceAlgorithmService.calculateDistance(
+                locked.getLatitude(), locked.getLongitude(),
+                vendor.getLatitude(), vendor.getLongitude());
+        double distV2C = distanceAlgorithmService.calculateDistance(
+                vendor.getLatitude(), vendor.getLongitude(),
+                order.getDeliveryLocationLatitude(), order.getDeliveryLocationLongitude());
+
         DeliveryAssignment assignment = DeliveryAssignment.builder()
                 .order(order)
-                .deliveryPartner(partner)
+                .deliveryPartner(locked)
                 .vendor(vendor)
+                .attemptNumber(context.getAttemptNumber())
                 .expectedDeliveryTime(eta)
                 .deliveryStatus(DeliveryStatus.ASSIGNED)
-                .distancePartnerToVendor(distPartnerToVendor)
-                .distanceVendorToCustomer(distVendorToCustomer)
+                .distancePartnerToVendor(distP2V)
+                .distanceVendorToCustomer(distV2C)
                 .build();
 
         assignment = deliveryAssignmentRepository.save(assignment);
 
-        // Step 4: Update partner's running assigned weight.
-        //         For busy partners isAvailable stays false (they are still mid-delivery);
-        //         the closeAssignment() path will set it back to true when they finish.
-        double newWeight = (partner.getCurrentAssignedWeight() != null
-                ? partner.getCurrentAssignedWeight() : 0.0)
-                + order.getTotalWeight();
-        partner.setCurrentAssignedWeight(newWeight);
-        userDetailsRepository.save(partner);
+        // Update partner running weight (isAvailable stays false for busy partners)
+        locked.setCurrentAssignedWeight(
+                (locked.getCurrentAssignedWeight() != null
+                        ? locked.getCurrentAssignedWeight() : 0.0)
+                        + order.getTotalWeight());
+        userDetailsRepository.save(locked);
 
-        log.info("Assigned orderId={} to partnerId={} isBusy={} workStart={} ETA={} totalDist={:.2f}km",
-                order.getOrderId(), partner.getId(), isBusy, workStart, eta,
-                distPartnerToVendor + distVendorToCustomer);
+        // Persist scoring audit trail
+        partnerSelectionAlgorithmService.saveDecision(
+                assignment,
+                isTop ? result.scoringResult() : sc.scoringResult(),
+                result.weightSnapshot(),
+                result.allEligibility(),
+                result.scoredCandidates(),
+                locked.getId());
 
-        return toResponse(assignment, isBusy, workStart);
+        log.info("Assigned orderId={} attempt={} partnerId={} isBusy={} ETA={} dist={:.2f}km",
+                order.getOrderId(), context.getAttemptNumber(), locked.getId(),
+                isBusy, eta, distP2V + distV2C);
+
+        return AssignmentResponseMapper.toResponse(assignment, isBusy, workStart);
     }
 
     // ── Queries ───────────────────────────────────────────────────────────────
 
     @Override
     public DeliveryAssignmentResponse getById(Long id) {
-        return toResponse(findById(id));
+        return AssignmentResponseMapper.toResponse(findById(id));
     }
 
     @Override
     public DeliveryAssignmentResponse getByOrderId(Long orderId) {
-        DeliveryAssignment da = deliveryAssignmentRepository.findByOrder_OrderId(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("DeliveryAssignment", "orderId", orderId));
-        return toResponse(da);
+        DeliveryAssignment da = deliveryAssignmentRepository
+                .findActiveAssignmentByOrderId(orderId)
+                .or(() -> deliveryAssignmentRepository.findAllByOrderId(orderId)
+                        .stream().findFirst())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "DeliveryAssignment", "orderId", orderId));
+        return AssignmentResponseMapper.toResponse(da);
     }
 
     @Override
     public List<DeliveryAssignmentResponse> getByPartnerId(Long partnerId) {
         return deliveryAssignmentRepository.findAllByDeliveryPartner_Id(partnerId)
-                .stream().map(this::toResponse).toList();
+                .stream().map(AssignmentResponseMapper::toResponse).toList();
     }
 
     @Override
     public List<DeliveryAssignmentResponse> getByVendorId(Long vendorId) {
         return deliveryAssignmentRepository.findAllByVendor_Id(vendorId)
-                .stream().map(this::toResponse).toList();
+                .stream().map(AssignmentResponseMapper::toResponse).toList();
     }
 
     @Override
     public List<DeliveryAssignmentResponse> getByStatus(DeliveryStatus status) {
-        if (status == null) {
-            return deliveryAssignmentRepository.findAll()
-                    .stream().map(this::toResponse).toList();
-        }
-        return deliveryAssignmentRepository.findAllByDeliveryStatus(status)
-                .stream().map(this::toResponse).toList();
+        List<DeliveryAssignment> all = (status == null)
+                ? deliveryAssignmentRepository.findAll()
+                : deliveryAssignmentRepository.findAllByDeliveryStatus(status);
+        return all.stream().map(AssignmentResponseMapper::toResponse).toList();
     }
 
-    // ── Status lifecycle ──────────────────────────────────────────────────────
+    // ── Status update (admin override) ───────────────────────────────────────
 
     @Override
     @Transactional
@@ -141,94 +256,49 @@ public class DeliveryAssignmentServiceImpl implements DeliveryAssignmentService 
         validateStatusTransition(da.getDeliveryStatus(), newStatus);
 
         da.setDeliveryStatus(newStatus);
+        if (newStatus == DeliveryStatus.ACCEPTED) da.setAcceptedAt(LocalDateTime.now());
+        if (TERMINAL.contains(newStatus))          da.setCompletedAt(LocalDateTime.now());
+
         da = deliveryAssignmentRepository.save(da);
 
-        // If reaching a terminal status, close out the assignment
         if (TERMINAL.contains(newStatus)) {
-            closeAssignment(da, newStatus);
+            HistoryStatus h = switch (newStatus) {
+                case DELIVERED                      -> HistoryStatus.COMPLETED;
+                case CANCELLED, REJECTED, EXPIRED   -> HistoryStatus.CANCELLED;
+                case DELIVERY_FAILED, FAILED        -> HistoryStatus.FAILED;
+                default                             -> HistoryStatus.COMPLETED;
+            };
+            closingHelper.closeAttempt(da, h);
         }
 
         log.info("Assignment id={} status → {}", id, newStatus);
-        return toResponse(da);
-    }
-
-    // ── Terminal status handling ───────────────────────────────────────────────
-
-    /**
-     * Called when an assignment reaches DELIVERED, CANCELLED, or FAILED.
-     *
-     * Actions:
-     *  1. Create HistoryDeliveryPartner record (with completedAt = now)
-     *  2. Create HistoryVendor record
-     *  3. Reduce partner's currentAssignedWeight by order weight
-     *  4. If partner has no more active assignments, mark them available again
-     */
-    private void closeAssignment(DeliveryAssignment da, DeliveryStatus terminalStatus) {
-        HistoryStatus historyStatus = switch (terminalStatus) {
-            case DELIVERED  -> HistoryStatus.COMPLETED;
-            case CANCELLED  -> HistoryStatus.CANCELLED;
-            case FAILED     -> HistoryStatus.FAILED;
-            default         -> HistoryStatus.COMPLETED;
-        };
-
-        // 1. HistoryDeliveryPartner
-        HistoryDeliveryPartner history = HistoryDeliveryPartner.builder()
-                .order(da.getOrder())
-                .deliveryPartner(da.getDeliveryPartner())
-                .status(historyStatus)
-                .completedAt(LocalDateTime.now())
-                .isActive(true)
-                .build();
-        historyDeliveryPartnerRepository.save(history);
-
-        // 2. HistoryVendor
-        HistoryVendor vendorHistory = HistoryVendor.builder()
-                .order(da.getOrder())
-                .vendor(da.getVendor())
-                .status(historyStatus)
-                .isActive(true)
-                .build();
-        historyVendorRepository.save(vendorHistory);
-
-        // 3. Reduce partner's assigned weight
-        UserDetails partner = da.getDeliveryPartner();
-        double reduced = Math.max(0.0,
-                (partner.getCurrentAssignedWeight() != null ? partner.getCurrentAssignedWeight() : 0.0)
-                        - da.getOrder().getTotalWeight());
-        partner.setCurrentAssignedWeight(reduced);
-
-        // 4. Re-check availability: mark available if no more active assignments remain
-        List<DeliveryAssignment> stillActive =
-                deliveryAssignmentRepository.findActiveAssignmentsByPartner(partner.getId());
-        if (stillActive.isEmpty()) {
-            partner.setIsAvailable(true);
-        }
-        userDetailsRepository.save(partner);
-
-        log.info("Closed assignment id={} status={} — partnerId={} weight reduced to {}kg",
-                da.getId(), terminalStatus, partner.getId(), reduced);
+        return AssignmentResponseMapper.toResponse(da);
     }
 
     // ── Status transition guard ───────────────────────────────────────────────
 
-    /**
-     * Enforces the allowed status progression:
-     * ASSIGNED → EN_ROUTE_TO_VENDOR → COLLECTED → EN_ROUTE_TO_CUSTOMER → DELIVERED
-     *                                                                  ↘ CANCELLED / FAILED (from any non-terminal)
-     */
     private void validateStatusTransition(DeliveryStatus current, DeliveryStatus next) {
         if (TERMINAL.contains(current)) {
             throw new InvalidStatusTransitionException("DeliveryAssignment", current, next);
         }
-        // CANCELLED and FAILED are always allowed from any non-terminal state
-        if (next == DeliveryStatus.CANCELLED || next == DeliveryStatus.FAILED) return;
+        // These are always allowed from any non-terminal state
+        if (next == DeliveryStatus.CANCELLED
+                || next == DeliveryStatus.REJECTED
+                || next == DeliveryStatus.EXPIRED
+                || next == DeliveryStatus.DELIVERY_FAILED) {
+            return;
+        }
 
         boolean valid = switch (current) {
-            case ASSIGNED              -> next == DeliveryStatus.EN_ROUTE_TO_VENDOR;
-            case EN_ROUTE_TO_VENDOR    -> next == DeliveryStatus.COLLECTED;
-            case COLLECTED             -> next == DeliveryStatus.EN_ROUTE_TO_CUSTOMER;
-            case EN_ROUTE_TO_CUSTOMER  -> next == DeliveryStatus.DELIVERED;
-            default                    -> false;
+            case ASSIGNED    -> next == DeliveryStatus.ACCEPTED;
+            case ACCEPTED    -> next == DeliveryStatus.PICKED_UP;
+            case PICKED_UP   -> next == DeliveryStatus.IN_TRANSIT;
+            case IN_TRANSIT  -> next == DeliveryStatus.DELIVERED;
+            // Legacy backward compatibility
+            case EN_ROUTE_TO_VENDOR -> next == DeliveryStatus.COLLECTED
+                                    || next == DeliveryStatus.PICKED_UP;
+            case COLLECTED          -> next == DeliveryStatus.IN_TRANSIT;
+            default -> false;
         };
 
         if (!valid) {
@@ -236,63 +306,8 @@ public class DeliveryAssignmentServiceImpl implements DeliveryAssignmentService 
         }
     }
 
-    // ── Mapping ───────────────────────────────────────────────────────────────
+    // ── Manual reassign (admin) ───────────────────────────────────────────────
 
-    private DeliveryAssignment findById(Long id) {
-        return deliveryAssignmentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("DeliveryAssignment", "id", id));
-    }
-
-    /**
-     * Maps a persisted {@link DeliveryAssignment} to the response DTO.
-     * The {@code isBusy} and {@code workStartTime} fields are only known at
-     * assignment creation time (they come from the algorithm result), so they
-     * must be passed in explicitly when building the create-response.
-     * For read-only queries they default to {@code false} / {@code null}
-     * because the busy context is already reflected in {@code expectedDeliveryTime}.
-     */
-    private DeliveryAssignmentResponse toResponse(DeliveryAssignment da,
-                                                   Boolean isBusy,
-                                                   LocalDateTime workStartTime) {
-        double partnerToVendor  = da.getDistancePartnerToVendor()  != null ? da.getDistancePartnerToVendor()  : 0.0;
-        double vendorToCustomer = da.getDistanceVendorToCustomer() != null ? da.getDistanceVendorToCustomer() : 0.0;
-
-        return DeliveryAssignmentResponse.builder()
-                .id(da.getId())
-                .orderId(da.getOrder().getOrderId())
-                .deliveryPartnerId(da.getDeliveryPartner().getId())
-                .deliveryPartnerName(da.getDeliveryPartner().getAuth().getUsername())
-                .vendorId(da.getVendor().getId())
-                .vendorName(da.getVendor().getAuth().getUsername())
-                .assignedAt(da.getAssignedAt())
-                .expectedDeliveryTime(da.getExpectedDeliveryTime())
-                .deliveryStatus(da.getDeliveryStatus())
-                .distancePartnerToVendor(partnerToVendor)
-                .distanceVendorToCustomer(vendorToCustomer)
-                .totalDistance(partnerToVendor + vendorToCustomer)
-                .isPartnerBusy(isBusy != null ? isBusy : false)
-                .workStartTime(workStartTime)
-                .build();
-    }
-
-    /** Convenience overload for read-only queries (no busy context available). */
-    private DeliveryAssignmentResponse toResponse(DeliveryAssignment da) {
-        return toResponse(da, false, null);
-    }
-
-    // ── Reassign ──────────────────────────────────────────────────────────────
-
-    /**
-     * Cancels the current assignment and immediately re-runs the algorithm
-     * on the same order to find a replacement partner.
-     *
-     * Flow:
-     *  1. Validate that the assignment is not already in a terminal state.
-     *  2. Cancel the current assignment (triggers history creation + weight restore).
-     *  3. Reset the order status back to PENDING so the order can be re-assigned.
-     *  4. Run assign() on the same order — throws NoEligiblePartnerException if no one available.
-     *  5. Return both the old assignment ID and the new assignment in ReassignResponse.
-     */
     @Override
     @Transactional
     public ReassignResponse reassign(Long assignmentId, String reason) {
@@ -300,26 +315,29 @@ public class DeliveryAssignmentServiceImpl implements DeliveryAssignmentService 
 
         if (TERMINAL.contains(existing.getDeliveryStatus())) {
             throw new BadRequestException(
-                    "Assignment id=" + assignmentId + " is already in a terminal state ("
+                    "Assignment id=" + assignmentId + " is in a terminal state ("
                     + existing.getDeliveryStatus() + ") and cannot be reassigned.");
         }
 
-        // Cancel the existing assignment — this restores partner weight and creates history
         existing.setDeliveryStatus(DeliveryStatus.CANCELLED);
+        existing.setFailureReason(AssignmentFailureReason.PARTNER_CANCELLED);
         existing = deliveryAssignmentRepository.save(existing);
-        closeAssignment(existing, DeliveryStatus.CANCELLED);
+        closingHelper.closeAttempt(existing, HistoryStatus.CANCELLED);
 
-        // Reset order back to PENDING so the algorithm treats it as a fresh order
         Order order = existing.getOrder();
         order.setOrderStatus(com.routeassign.domain.enums.OrderStatus.PENDING);
 
-        log.info("Reassigning orderId={} assignmentId={} reason='{}'",
+        log.info("Manual reassign orderId={} assignmentId={} reason='{}'",
                 order.getOrderId(), assignmentId, reason);
 
-        // Run the full algorithm again
-        DeliveryAssignmentResponse newAssignment = assign(order);
+        long totalAttempts = deliveryAssignmentRepository.countByOrderId(order.getOrderId());
+        AssignmentContext ctx = new AssignmentContext(
+                order,
+                Set.of(existing.getDeliveryPartner().getId()),
+                (int) totalAttempts + 1,
+                AssignmentFailureReason.PARTNER_CANCELLED);
 
-        // Mark the order ASSIGNED again
+        DeliveryAssignmentResponse newAssignment = assign(order, ctx);
         order.setOrderStatus(com.routeassign.domain.enums.OrderStatus.ASSIGNED);
 
         return ReassignResponse.builder()
@@ -327,5 +345,19 @@ public class DeliveryAssignmentServiceImpl implements DeliveryAssignmentService 
                 .newAssignment(newAssignment)
                 .reason(reason != null ? reason : "Manual reassignment")
                 .build();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private DeliveryAssignment findById(Long id) {
+        return deliveryAssignmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "DeliveryAssignment", "id", id));
+    }
+
+    private double remainingCapacity(UserDetails partner) {
+        double cap      = partner.getCapacity()              != null ? partner.getCapacity()              : 0.0;
+        double assigned = partner.getCurrentAssignedWeight() != null ? partner.getCurrentAssignedWeight() : 0.0;
+        return Math.max(0.0, cap - assigned);
     }
 }

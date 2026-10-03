@@ -2,23 +2,42 @@ package com.routeassign.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Spring Security configuration.
  *
- * Currently set to PERMIT_ALL so the project compiles and runs
- * during the scaffolding phase. JWT filter and role-based access
- * control should be added when the authentication layer is implemented.
+ * Current state
+ * ─────────────
+ * JWT filter is not yet wired in — the full authentication layer will be added
+ * in a later phase.  Until then, most endpoints are open.
+ *
+ * Phase 2 addition: the scoring-rules PUT endpoint is explicitly restricted to
+ * ADMIN role at the URL level here, and also at the method level via
+ * {@code @PreAuthorize} in {@code AssignmentScoringRuleController} (defence in depth).
+ *
+ * {@code @EnableMethodSecurity} activates {@code @PreAuthorize} / {@code @PostAuthorize}
+ * on any Spring-managed bean, not just controllers.
+ *
+ * TODO (future JWT phase):
+ *   .requestMatchers(POST, "/api/auth/**").permitAll()
+ *   .requestMatchers(GET,  "/api/items/**").permitAll()
+ *   .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
+ *   .requestMatchers("/api/assignments/**").hasAnyRole("DELIVERY_PARTNER", "ADMIN")
+ *   .anyRequest().authenticated()
+ *   .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity          // activates @PreAuthorize on beans
 public class SecurityConfig {
 
     /**
@@ -33,15 +52,8 @@ public class SecurityConfig {
     /**
      * Security filter chain.
      *
-     * TODO: replace permitAll() with proper role-based rules and add the
-     *       JWT authentication filter once JwtService is implemented:
-     *
-     *       .requestMatchers(POST, "/api/auth/**").permitAll()
-     *       .requestMatchers(GET,  "/api/items/**").permitAll()
-     *       .requestMatchers("/api/orders/**").hasRole(ROLE_CUSTOMER)
-     *       .requestMatchers("/api/assignments/**").hasAnyRole(ROLE_DELIVERY_PARTNER, ROLE_ADMIN)
-     *       .anyRequest().authenticated()
-     *       .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+     * Explicit rule: PUT /api/v1/scoring-rules/** → ADMIN only.
+     * All other requests remain open until the JWT filter is introduced.
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -50,7 +62,14 @@ public class SecurityConfig {
             .sessionManagement(session ->
                     session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    .anyRequest().permitAll()   // TODO: tighten when JWT filter is added
+                    // ── Phase 2: Scoring rule writes are ADMIN only ───────────
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/scoring-rules/**")
+                            .hasRole(AppConstants.ROLE_ADMIN)
+                    // ── Phase 1: Assignment rule writes are ADMIN only ────────
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/assignment-rules/**")
+                            .hasRole(AppConstants.ROLE_ADMIN)
+                    // ── Everything else: open until JWT filter is wired ───────
+                    .anyRequest().permitAll()
             );
         return http.build();
     }

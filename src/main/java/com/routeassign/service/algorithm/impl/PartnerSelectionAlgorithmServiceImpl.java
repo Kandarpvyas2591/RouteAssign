@@ -1,324 +1,390 @@
 package com.routeassign.service.algorithm.impl;
 
-import com.routeassign.config.BusinessRulesConfig;
+import com.routeassign.domain.entity.AssignmentDecision;
+import com.routeassign.domain.entity.AssignmentDecisionCandidate;
 import com.routeassign.domain.entity.DeliveryAssignment;
 import com.routeassign.domain.entity.Order;
 import com.routeassign.domain.entity.UserDetails;
+import com.routeassign.domain.enums.AssignmentRuleKey;
+import com.routeassign.domain.enums.AssignmentScoreFactor;
+import com.routeassign.domain.enums.RejectionReason;
+import com.routeassign.dto.response.ScoringResult;
+import com.routeassign.repository.AssignmentDecisionCandidateRepository;
+import com.routeassign.repository.AssignmentDecisionRepository;
 import com.routeassign.repository.DeliveryAssignmentRepository;
 import com.routeassign.repository.HistoryDeliveryPartnerRepository;
 import com.routeassign.repository.UserDetailsRepository;
+import com.routeassign.service.AssignmentRuleService;
+import com.routeassign.service.algorithm.AssignmentCandidate;
+import com.routeassign.service.algorithm.AssignmentContext;
+import com.routeassign.service.algorithm.AssignmentScoringEngine;
 import com.routeassign.service.algorithm.DeliveryTimeAlgorithmService;
 import com.routeassign.service.algorithm.DistanceAlgorithmService;
+import com.routeassign.service.algorithm.EligibilityResult;
 import com.routeassign.service.algorithm.PartnerSelectionAlgorithmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Algorithm 4 — Main Delivery Partner Selection.
+ * Algorithm 4 — Partner Selection Orchestrator (Phase 7).
  *
- * ┌─────────────────────────────────────────────────────────────────────────┐
- * │  FULL SELECTION FLOW                                                    │
- * ├─────────────────────────────────────────────────────────────────────────┤
- * │  Pool A — Free partners                                                 │
- * │    1. Active + available + remaining capacity ≥ order weight            │
- * │    2. Same-vendor reuse check (subset of Pool A)                        │
- * │    3. ETA = normal working-hour calculation from now                    │
- * │                                                                         │
- * │  Pool B — Busy partners (cross-vendor reuse)                            │
- * │    4. Active + isAvailable=false + remaining capacity ≥ order weight    │
- * │    5. Must NOT already be in Pool A (no double-counting)                │
- * │    6. ETA = currentDeliveryEta + rest + travel, snapped to window       │
- * │                                                                         │
- * │  Merge A + B → compare by earliest ETA                                 │
- * │    7. Keep all candidates whose ETA equals the minimum ETA              │
- * │    8. Tie-breaking (applied to equal-ETA candidates):                   │
- * │       a. Never previously assigned  → prefer new partners               │
- * │       b. Multiple new partners      → pick one randomly                 │
- * │       c. No new partners            → highest rating                    │
- * │       d. Same rating                → longest idle time                 │
- * └─────────────────────────────────────────────────────────────────────────┘
+ * Accepts {@link AssignmentContext} so reassignment attempts can exclude
+ * previously failed partners without touching the scoring engine or strategies.
+ *
+ * ┌──────────────────────────────────────────────────────────────────────────┐
+ * │  FLOW                                                                    │
+ * ├──────────────────────────────────────────────────────────────────────────┤
+ * │  1. Fetch all active + available partners, then subtract excludedIds.    │
+ * │     Fetch busy partners if ENABLE_BUSY_PARTNER_REUSE=true.              │
+ * │  2. Eligibility check per partner.                                       │
+ * │  3. Build AssignmentCandidate for each eligible partner.                 │
+ * │  4. Score all eligible candidates.                                       │
+ * │  5. Select winner (score → idle time → random).                          │
+ * │  6. Return PartnerSelectionResult with full audit payload.               │
+ * └──────────────────────────────────────────────────────────────────────────┘
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PartnerSelectionAlgorithmServiceImpl implements PartnerSelectionAlgorithmService {
 
-    private final UserDetailsRepository            userDetailsRepository;
-    private final DeliveryAssignmentRepository     deliveryAssignmentRepository;
-    private final HistoryDeliveryPartnerRepository historyDeliveryPartnerRepository;
-    private final DistanceAlgorithmService         distanceAlgorithmService;
-    private final DeliveryTimeAlgorithmService     deliveryTimeAlgorithmService;
-    private final BusinessRulesConfig              businessRules;
+    private final UserDetailsRepository                 userDetailsRepository;
+    private final DeliveryAssignmentRepository          deliveryAssignmentRepository;
+    private final HistoryDeliveryPartnerRepository      historyDeliveryPartnerRepository;
+    private final AssignmentDecisionRepository          assignmentDecisionRepository;
+    private final AssignmentDecisionCandidateRepository assignmentDecisionCandidateRepository;
+    private final DistanceAlgorithmService              distanceAlgorithmService;
+    private final DeliveryTimeAlgorithmService          deliveryTimeAlgorithmService;
+    private final AssignmentRuleService                 assignmentRuleService;
+    private final AssignmentScoringEngine               assignmentScoringEngine;
 
-    // ── Internal candidate record (richer than the public result) ─────────────
-    // Carries everything needed for scoring + tie-breaking inside this class.
-    private record Candidate(
-            UserDetails   partner,
-            LocalDateTime eta,
-            boolean       isBusy,
-            LocalDateTime workStartTime,
-            double        totalDistance
-    ) {}
+    private static final double SCORE_EPSILON = 1e-6;
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Primary entry point (AssignmentContext)
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
-    public Optional<PartnerSelectionResult> selectPartnerWithEta(Order order) {
-        log.info("Starting partner selection for orderId={}", order.getOrderId());
+    @Transactional
+    public Optional<PartnerSelectionResult> selectPartnerWithEta(AssignmentContext context) {
+        Order         order       = context.getOrder();
+        Set<Long>     excluded    = context.getExcludedPartnerIds();
+        int           attempt     = context.getAttemptNumber();
+
+        log.info("Partner selection orderId={} attempt={} excluded={}",
+                order.getOrderId(), attempt, excluded);
 
         LocalDateTime now = LocalDateTime.now();
 
-        // ── Pool A: free eligible partners ───────────────────────────────────
-        List<UserDetails> freePartners = userDetailsRepository
-                .findEligibleDeliveryPartners(order.getTotalWeight());
+        // ── Step 1: gather candidate pools, apply exclusion list ──────────────
+        List<UserDetails> freeRaw = userDetailsRepository
+                .findEligibleDeliveryPartners(order.getTotalWeight())
+                .stream()
+                .filter(p -> !excluded.contains(p.getId()))
+                .toList();
 
-        // Apply same-vendor preference within the free pool
-        List<UserDetails> sameVendorFree = filterSameVendorEligible(freePartners, order);
-        List<UserDetails> freePool = sameVendorFree.isEmpty() ? freePartners : sameVendorFree;
+        boolean enableBusyReuse = assignmentRuleService
+                .getBooleanRule(AssignmentRuleKey.ENABLE_BUSY_PARTNER_REUSE);
 
-        // Build Candidate objects for free partners
-        List<Candidate> candidates = buildFreeCandidates(freePool, order, now);
+        List<UserDetails> busyRaw = enableBusyReuse
+                ? userDetailsRepository.findBusyEligibleDeliveryPartners(order.getTotalWeight())
+                        .stream()
+                        .filter(p -> !excluded.contains(p.getId()))
+                        .toList()
+                : List.of();
 
-        // ── Pool B: busy partners (cross-vendor reuse) ────────────────────────
-        if (businessRules.isEnableBusyPartnerReuse()) {
-            Set<Long> freeIds = freePartners.stream()
-                    .map(UserDetails::getId)
-                    .collect(Collectors.toSet());
+        Set<Long> sameVendorIds = computeSameVendorIds(freeRaw, order);
 
-            List<UserDetails> busyPartners = userDetailsRepository
-                    .findBusyEligibleDeliveryPartners(order.getTotalWeight())
-                    .stream()
-                    .filter(p -> !freeIds.contains(p.getId()))  // exclude already-free partners
-                    .toList();
+        // ── Step 2: eligibility check ─────────────────────────────────────────
+        List<EligibilityResult> allEligibility = new ArrayList<>();
 
-            List<Candidate> busyCandidates = buildBusyCandidates(busyPartners, order);
-            candidates = new ArrayList<>(candidates);
-            candidates.addAll(busyCandidates);
-
-            log.debug("Candidate pool: {} free + {} busy for orderId={}",
-                    freePool.size(), busyCandidates.size(), order.getOrderId());
+        for (UserDetails p : freeRaw) {
+            allEligibility.add(checkEligibility(p, order, false));
         }
 
-        if (candidates.isEmpty()) {
-            log.warn("No eligible partners (free or busy) for orderId={}", order.getOrderId());
+        Set<Long> freeIds = freeRaw.stream().map(UserDetails::getId).collect(Collectors.toSet());
+        for (UserDetails p : busyRaw) {
+            if (!freeIds.contains(p.getId())) {
+                allEligibility.add(checkEligibility(p, order, true));
+            }
+        }
+
+        List<EligibilityResult> eligible = allEligibility.stream()
+                .filter(EligibilityResult::eligible)
+                .toList();
+
+        log.debug("Eligibility: {}/{} eligible (attempt={} orderId={})",
+                eligible.size(), allEligibility.size(), attempt, order.getOrderId());
+
+        if (eligible.isEmpty()) {
+            log.warn("No eligible partners for orderId={} attempt={}", order.getOrderId(), attempt);
             return Optional.empty();
         }
 
-        // ── Find earliest ETA ─────────────────────────────────────────────────
-        LocalDateTime earliestEta = candidates.stream()
-                .map(Candidate::eta)
-                .min(LocalDateTime::compareTo)
-                .orElseThrow();
+        // ── Step 3: build candidates ──────────────────────────────────────────
+        List<AssignmentCandidate> candidates =
+                buildCandidates(eligible, order, now, sameVendorIds);
 
-        List<Candidate> shortlisted = candidates.stream()
-                .filter(c -> !c.eta().isAfter(earliestEta.plusMinutes(1))) // 1-min tolerance
-                .collect(Collectors.toList());
+        // ── Step 4: score all eligible candidates ─────────────────────────────
+        Map<AssignmentScoreFactor, Double> weightSnapshot =
+                assignmentScoringEngine.getEnabledWeights();
 
-        log.debug("Shortlisted {} candidate(s) with earliest ETA {} for orderId={}",
-                shortlisted.size(), earliestEta, order.getOrderId());
+        List<ScoredCandidate> scored = candidates.stream()
+                .map(c -> new ScoredCandidate(c, assignmentScoringEngine.score(c)))
+                .toList();
 
-        // ── Tie-breaking ──────────────────────────────────────────────────────
-        Candidate winner = applyTieBreaking(shortlisted);
+        // ── Step 5: select winner ─────────────────────────────────────────────
+        ScoredCandidate winner       = selectWinner(scored);
+        ScoringResult   winnerResult = winner.scoringResult();
 
-        log.info("Selected partnerId={} isBusy={} ETA={} for orderId={}",
-                winner.partner().getId(), winner.isBusy(), winner.eta(), order.getOrderId());
+        log.info("Selected partnerId={} isBusy={} ETA={} score={:.2f} orderId={}",
+                winner.candidate().getPartnerId(), winner.candidate().isBusy(),
+                winner.candidate().getEta(), winnerResult.getFinalScore(), order.getOrderId());
 
         return Optional.of(new PartnerSelectionResult(
-                winner.partner(),
-                winner.eta(),
-                winner.isBusy(),
-                winner.workStartTime()
+                winner.candidate().getPartner(),
+                winner.candidate().getEta(),
+                winner.candidate().isBusy(),
+                winner.candidate().getWorkStartTime(),
+                winnerResult,
+                weightSnapshot,
+                allEligibility,
+                scored
         ));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Pool A helpers
+    // Audit persistence
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Returns the subset of free partners already assigned to the same vendor
-     * whose extra distance to the new delivery location is within the threshold.
-     */
-    private List<UserDetails> filterSameVendorEligible(List<UserDetails> eligible, Order order) {
-        Long vendorId           = order.getVendor().getId();
-        double maxExtraDistance = businessRules.getMaxAdditionalDeliveryDistance();
-        double vendorLat        = order.getVendor().getLatitude();
-        double vendorLon        = order.getVendor().getLongitude();
-        double newCustomerLat   = order.getDeliveryLocationLatitude();
-        double newCustomerLon   = order.getDeliveryLocationLongitude();
+    @Override
+    @Transactional
+    public void saveDecision(DeliveryAssignment                assignment,
+                             ScoringResult                     result,
+                             Map<AssignmentScoreFactor, Double>  weightSnapshot,
+                             List<EligibilityResult>           allEligibility,
+                             List<ScoredCandidate>             scoredCandidates,
+                             Long                              winnerPartnerId) {
 
-        List<UserDetails> result = new ArrayList<>();
-        for (UserDetails partner : eligible) {
-            boolean activeAtVendor = !deliveryAssignmentRepository
-                    .findActiveAssignmentsByPartnerAndVendor(partner.getId(), vendorId)
-                    .isEmpty();
+        AssignmentDecision decision = AssignmentDecision.builder()
+                .deliveryAssignment(assignment)
+                .distanceScore(result.getDistanceScore())
+                .capacityScore(result.getCapacityScore())
+                .ratingScore(result.getRatingScore())
+                .idleTimeScore(result.getIdleTimeScore())
+                .sameVendorScore(result.getSameVendorScore())
+                .finalScore(result.getFinalScore())
+                .distanceWeight(weightSnapshot.getOrDefault(AssignmentScoreFactor.DISTANCE,    null))
+                .capacityWeight(weightSnapshot.getOrDefault(AssignmentScoreFactor.CAPACITY,    null))
+                .ratingWeight(  weightSnapshot.getOrDefault(AssignmentScoreFactor.RATING,      null))
+                .idleTimeWeight(weightSnapshot.getOrDefault(AssignmentScoreFactor.IDLE_TIME,   null))
+                .sameVendorWeight(weightSnapshot.getOrDefault(AssignmentScoreFactor.SAME_VENDOR, null))
+                .build();
 
-            if (!activeAtVendor) continue;
+        decision = assignmentDecisionRepository.save(decision);
 
-            double extraDist = distanceAlgorithmService.calculateDistance(
-                    vendorLat, vendorLon, newCustomerLat, newCustomerLon);
+        Map<Long, ScoredCandidate> scoredByPartnerId = scoredCandidates.stream()
+                .collect(Collectors.toMap(sc -> sc.candidate().getPartnerId(), sc -> sc));
 
-            if (extraDist <= maxExtraDistance) {
-                result.add(partner);
-                log.debug("Same-vendor reuse eligible: partnerId={} extraDist={:.2f}km",
-                        partner.getId(), extraDist);
-            }
+        List<AssignmentDecisionCandidate> rows = new ArrayList<>();
+        final AssignmentDecision saved = decision;
+
+        for (EligibilityResult er : allEligibility) {
+            ScoredCandidate sc     = scoredByPartnerId.get(er.partnerId());
+            boolean         winner = er.partnerId().equals(winnerPartnerId);
+
+            String partnerName = er.partner().getAuth() != null
+                    ? er.partner().getAuth().getUsername() : "unknown";
+
+            rows.add(AssignmentDecisionCandidate.builder()
+                    .decision(saved)
+                    .partnerId(er.partnerId())
+                    .partnerName(partnerName)
+                    .eligible(er.eligible())
+                    .rejectionReason(er.rejectionReason())
+                    .distanceScore(  sc != null ? sc.scoringResult().getDistanceScore()   : null)
+                    .capacityScore(  sc != null ? sc.scoringResult().getCapacityScore()   : null)
+                    .ratingScore(    sc != null ? sc.scoringResult().getRatingScore()      : null)
+                    .idleTimeScore(  sc != null ? sc.scoringResult().getIdleTimeScore()    : null)
+                    .sameVendorScore(sc != null ? sc.scoringResult().getSameVendorScore()  : null)
+                    .finalScore(     sc != null ? sc.scoringResult().getFinalScore()       : null)
+                    .isWinner(winner)
+                    .build());
         }
-        return result;
+
+        assignmentDecisionCandidateRepository.saveAll(rows);
+
+        log.info("Saved decision id={} with {} candidate rows for assignmentId={}",
+                saved.getId(), rows.size(), assignment.getId());
     }
 
-    /**
-     * Computes Candidate objects for the free partner pool.
-     * ETA uses the standard working-hour calculation from {@code now}.
-     */
-    private List<Candidate> buildFreeCandidates(List<UserDetails> freePool,
-                                                Order order,
-                                                LocalDateTime now) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Eligibility
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private EligibilityResult checkEligibility(UserDetails partner, Order order, boolean isBusy) {
+        if (partner.getLatitude() == null || partner.getLongitude() == null) {
+            return EligibilityResult.rejected(partner, RejectionReason.MISSING_LOCATION_DATA);
+        }
+        double remaining = remainingCapacity(partner);
+        if (remaining < order.getTotalWeight()) {
+            return EligibilityResult.rejected(partner, RejectionReason.INSUFFICIENT_CAPACITY);
+        }
+        if (isBusy && !assignmentRuleService.getBooleanRule(AssignmentRuleKey.ENABLE_BUSY_PARTNER_REUSE)) {
+            return EligibilityResult.rejected(partner, RejectionReason.PARTNER_UNAVAILABLE);
+        }
+        return EligibilityResult.eligible(partner);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Candidate building
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private List<AssignmentCandidate> buildCandidates(List<EligibilityResult> eligible,
+                                                      Order order,
+                                                      LocalDateTime now,
+                                                      Set<Long> sameVendorIds) {
         double vendorLat   = order.getVendor().getLatitude();
         double vendorLon   = order.getVendor().getLongitude();
         double customerLat = order.getDeliveryLocationLatitude();
         double customerLon = order.getDeliveryLocationLongitude();
+        int    restMinutes = assignmentRuleService.getIntegerRule(AssignmentRuleKey.REST_DURATION_MINUTES);
 
-        List<Candidate> list = new ArrayList<>();
-        for (UserDetails partner : freePool) {
-            double distToVendor = distanceAlgorithmService.calculateDistance(
+        List<AssignmentCandidate> list = new ArrayList<>();
+        for (EligibilityResult er : eligible) {
+            UserDetails partner = er.partner();
+            boolean     isBusy  = !Boolean.TRUE.equals(partner.getIsAvailable());
+
+            double distToVendor   = distanceAlgorithmService.calculateDistance(
                     partner.getLatitude(), partner.getLongitude(), vendorLat, vendorLon);
             double distToCustomer = distanceAlgorithmService.calculateDistance(
                     vendorLat, vendorLon, customerLat, customerLon);
-            double totalDist = distToVendor + distToCustomer;
 
-            LocalDateTime workStart = deliveryTimeAlgorithmService
-                    .determineWorkStartTime(now, distToVendor);
-            LocalDateTime eta = deliveryTimeAlgorithmService
-                    .calculateExpectedDeliveryTime(now, distToVendor, distToCustomer);
+            LocalDateTime workStart;
+            LocalDateTime eta;
 
-            list.add(new Candidate(partner, eta, false, workStart, totalDist));
+            if (isBusy) {
+                var latestOpt = deliveryAssignmentRepository
+                        .findLatestActiveAssignmentByPartner(partner.getId());
+                if (latestOpt.isEmpty() || latestOpt.get().getExpectedDeliveryTime() == null) {
+                    isBusy    = false;
+                    workStart = deliveryTimeAlgorithmService.determineWorkStartTime(now, distToVendor);
+                    eta       = deliveryTimeAlgorithmService.calculateExpectedDeliveryTime(
+                            now, distToVendor, distToCustomer);
+                } else {
+                    LocalDateTime currentEta    = latestOpt.get().getExpectedDeliveryTime();
+                    LocalDateTime restReadyTime = currentEta.plusMinutes(restMinutes);
+                    workStart = deliveryTimeAlgorithmService.determineWorkStartTime(restReadyTime, distToVendor);
+                    eta       = deliveryTimeAlgorithmService.calculateEtaForBusyPartner(
+                            currentEta, restMinutes, distToVendor, distToCustomer);
+                }
+            } else {
+                workStart = deliveryTimeAlgorithmService.determineWorkStartTime(now, distToVendor);
+                eta       = deliveryTimeAlgorithmService.calculateExpectedDeliveryTime(
+                        now, distToVendor, distToCustomer);
+            }
+
+            list.add(new AssignmentCandidate(
+                    partner, order,
+                    distToVendor, distToCustomer,
+                    remainingCapacity(partner),
+                    idleMinutes(partner.getId(), now),
+                    lastCompletedAt(partner.getId()),
+                    sameVendorIds.contains(partner.getId()),
+                    eta, workStart, isBusy
+            ));
         }
         return list;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Pool B helpers
+    // Winner selection
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Computes Candidate objects for the busy partner pool.
-     *
-     * ETA formula:
-     *   restReadyTime = latestActiveAssignment.expectedDeliveryTime + restDurationMinutes
-     *   workStart     = snap(restReadyTime, distancePartnerToVendor)
-     *   eta           = scheduleWithinWorkingHours(workStart, totalTravelHours)
-     *
-     * Partners whose active assignment has no expectedDeliveryTime stored are skipped.
-     */
-    private List<Candidate> buildBusyCandidates(List<UserDetails> busyPartners, Order order) {
-        double vendorLat   = order.getVendor().getLatitude();
-        double vendorLon   = order.getVendor().getLongitude();
-        double customerLat = order.getDeliveryLocationLatitude();
-        double customerLon = order.getDeliveryLocationLongitude();
-        int restMinutes    = businessRules.getPartnerRestDurationMinutes();
+    private ScoredCandidate selectWinner(List<ScoredCandidate> scored) {
+        if (scored.size() == 1) return scored.get(0);
 
-        List<Candidate> list = new ArrayList<>();
-        for (UserDetails partner : busyPartners) {
-
-            // Find the latest active assignment to get current ETA
-            Optional<DeliveryAssignment> latestOpt =
-                    deliveryAssignmentRepository.findLatestActiveAssignmentByPartner(partner.getId());
-
-            if (latestOpt.isEmpty()) continue;
-
-            LocalDateTime currentEta = latestOpt.get().getExpectedDeliveryTime();
-            if (currentEta == null) {
-                // Cannot compute rest-adjusted ETA without a known current ETA — skip
-                log.debug("Skipping busy partnerId={}: no expectedDeliveryTime on active assignment",
-                        partner.getId());
-                continue;
-            }
-
-            double distToVendor = distanceAlgorithmService.calculateDistance(
-                    partner.getLatitude(), partner.getLongitude(), vendorLat, vendorLon);
-            double distToCustomer = distanceAlgorithmService.calculateDistance(
-                    vendorLat, vendorLon, customerLat, customerLon);
-            double totalDist = distToVendor + distToCustomer;
-
-            // Work start = restReadyTime snapped to valid window
-            LocalDateTime restReadyTime = currentEta.plusMinutes(restMinutes);
-            LocalDateTime workStart = deliveryTimeAlgorithmService
-                    .determineWorkStartTime(restReadyTime, distToVendor);
-
-            LocalDateTime eta = deliveryTimeAlgorithmService.calculateEtaForBusyPartner(
-                    currentEta, restMinutes, distToVendor, distToCustomer);
-
-            list.add(new Candidate(partner, eta, true, workStart, totalDist));
-
-            log.debug("Busy candidate partnerId={} currentEta={} restReadyTime={} eta={}",
-                    partner.getId(), currentEta, restReadyTime, eta);
-        }
-        return list;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Tie-breaking (operates on Candidate, not raw UserDetails)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private Candidate applyTieBreaking(List<Candidate> shortlisted) {
-        if (shortlisted.size() == 1) return shortlisted.get(0);
-
-        // Prefer free partners over busy partners first
-        List<Candidate> freeOnly = shortlisted.stream()
-                .filter(c -> !c.isBusy())
-                .collect(Collectors.toList());
-        List<Candidate> pool = freeOnly.isEmpty() ? shortlisted : freeOnly;
-
-        if (pool.size() == 1) {
-            log.debug("Tie-break: only one {} partner", freeOnly.isEmpty() ? "busy" : "free");
-            return pool.get(0);
-        }
-
-        // 5a: never previously assigned
-        List<Candidate> neverAssigned = pool.stream()
-                .filter(c -> !historyDeliveryPartnerRepository
-                        .existsByDeliveryPartner_Id(c.partner().getId()))
-                .collect(Collectors.toList());
-
-        if (!neverAssigned.isEmpty()) {
-            if (neverAssigned.size() == 1) return neverAssigned.get(0);
-            // 5b: multiple never-assigned → random
-            log.debug("Tie-break 5b: random among {} never-assigned", neverAssigned.size());
-            return neverAssigned.get(new Random().nextInt(neverAssigned.size()));
-        }
-
-        // 5c: highest rating
-        double maxRating = pool.stream()
-                .mapToDouble(c -> c.partner().getRating() != null ? c.partner().getRating() : 0.0)
+        double maxScore = scored.stream()
+                .mapToDouble(sc -> sc.scoringResult().getFinalScore())
                 .max().orElse(0.0);
 
-        List<Candidate> topRated = pool.stream()
-                .filter(c -> {
-                    double r = c.partner().getRating() != null ? c.partner().getRating() : 0.0;
-                    return Math.abs(r - maxRating) < 1e-9;
-                })
+        List<ScoredCandidate> top = scored.stream()
+                .filter(sc -> maxScore - sc.scoringResult().getFinalScore() <= SCORE_EPSILON)
                 .collect(Collectors.toList());
 
-        if (topRated.size() == 1) return topRated.get(0);
+        if (top.size() == 1) return top.get(0);
 
-        // 5d: longest idle time
-        log.debug("Tie-break 5d: idle time among {} equal-rated candidates", topRated.size());
-        return topRated.stream()
-                .max(Comparator.comparingLong(c -> getIdleTimeMillis(c.partner())))
-                .orElse(topRated.get(0));
+        long maxIdle = top.stream()
+                .mapToLong(sc -> sc.candidate().getIdleMinutes())
+                .max().orElse(0L);
+
+        List<ScoredCandidate> idleWinners = top.stream()
+                .filter(sc -> sc.candidate().getIdleMinutes() == maxIdle)
+                .collect(Collectors.toList());
+
+        if (idleWinners.size() == 1) return idleWinners.get(0);
+
+        return idleWinners.get(new Random().nextInt(idleWinners.size()));
     }
 
-    private long getIdleTimeMillis(UserDetails partner) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Same-vendor helper
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private Set<Long> computeSameVendorIds(List<UserDetails> freePartners, Order order) {
+        Long   vendorId     = order.getVendor().getId();
+        double maxExtraDist = assignmentRuleService.getDoubleRule(AssignmentRuleKey.SAME_VENDOR_MAX_DISTANCE);
+        double vendorLat    = order.getVendor().getLatitude();
+        double vendorLon    = order.getVendor().getLongitude();
+
+        double extraDist = distanceAlgorithmService.calculateDistance(
+                vendorLat, vendorLon,
+                order.getDeliveryLocationLatitude(),
+                order.getDeliveryLocationLongitude());
+
+        if (extraDist > maxExtraDist) return Set.of();
+
+        return freePartners.stream()
+                .filter(p -> !deliveryAssignmentRepository
+                        .findActiveAssignmentsByPartnerAndVendor(p.getId(), vendorId)
+                        .isEmpty())
+                .map(UserDetails::getId)
+                .collect(Collectors.toSet());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Measurement helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private double remainingCapacity(UserDetails partner) {
+        double cap      = partner.getCapacity()              != null ? partner.getCapacity()              : 0.0;
+        double assigned = partner.getCurrentAssignedWeight() != null ? partner.getCurrentAssignedWeight() : 0.0;
+        return Math.max(0.0, cap - assigned);
+    }
+
+    private long idleMinutes(Long partnerId, LocalDateTime now) {
         return historyDeliveryPartnerRepository
-                .findLatestCompletedByPartner(partner.getId())
-                .map(h -> Duration.between(h.getCompletedAt(), LocalDateTime.now()).toMillis())
+                .findLatestCompletedByPartner(partnerId)
+                .map(h -> Duration.between(h.getCompletedAt(), now).toMinutes())
                 .orElse(Long.MAX_VALUE);
+    }
+
+    private LocalDateTime lastCompletedAt(Long partnerId) {
+        return historyDeliveryPartnerRepository
+                .findLatestCompletedByPartner(partnerId)
+                .map(h -> h.getCompletedAt())
+                .orElse(null);
     }
 }

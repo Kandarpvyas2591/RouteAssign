@@ -3,10 +3,12 @@ package com.routeassign.repository;
 import com.routeassign.domain.entity.UserAuth;
 import com.routeassign.domain.entity.UserDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
@@ -64,4 +66,29 @@ public interface UserDetailsRepository extends JpaRepository<UserDetails, Long> 
               AND ud.auth.role = 'DELIVERY_PARTNER'
             """)
     List<UserDetails> findBusyEligibleDeliveryPartners(@Param("orderWeight") Double orderWeight);
+
+    /**
+     * Acquires a PESSIMISTIC_WRITE (SELECT … FOR UPDATE) lock on a single
+     * delivery partner row.
+     *
+     * Called immediately before the final assignment step so that only one
+     * transaction at a time can read-validate-write a partner's capacity and
+     * availability state.  The lock is held until the surrounding
+     * {@code @Transactional} method commits or rolls back.
+     *
+     * Pattern:
+     * <pre>
+     * userDetailsRepository.findByIdWithPessimisticLock(partnerId)
+     *     .ifPresent(locked -> {
+     *         // re-check eligibility on fresh data
+     *         // create DeliveryAssignment
+     *         // update currentAssignedWeight
+     *     });
+     * </pre>
+     *
+     * Only the SELECTED partner is locked — never the entire partner table.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ud FROM UserDetails ud WHERE ud.id = :id")
+    Optional<UserDetails> findByIdWithPessimisticLock(@Param("id") Long id);
 }

@@ -47,15 +47,15 @@ public class DashboardServiceImpl implements DashboardService {
         // ── Live assignment counts ────────────────────────────────────────────
         long assignedAssignments         = deliveryAssignmentRepository
                 .findAllByDeliveryStatus(DeliveryStatus.ASSIGNED).size();
-        long enRouteToVendorAssignments  = deliveryAssignmentRepository
-                .findAllByDeliveryStatus(DeliveryStatus.EN_ROUTE_TO_VENDOR).size();
-        long collectedAssignments        = deliveryAssignmentRepository
-                .findAllByDeliveryStatus(DeliveryStatus.COLLECTED).size();
-        long enRouteToCustomerAssignments = deliveryAssignmentRepository
-                .findAllByDeliveryStatus(DeliveryStatus.EN_ROUTE_TO_CUSTOMER).size();
+        long acceptedAssignments         = deliveryAssignmentRepository
+                .findAllByDeliveryStatus(DeliveryStatus.ACCEPTED).size();
+        long pickedUpAssignments         = deliveryAssignmentRepository
+                .findAllByDeliveryStatus(DeliveryStatus.PICKED_UP).size();
+        long inTransitAssignments        = deliveryAssignmentRepository
+                .findAllByDeliveryStatus(DeliveryStatus.IN_TRANSIT).size();
 
-        long liveAssignments = assignedAssignments + enRouteToVendorAssignments
-                + collectedAssignments + enRouteToCustomerAssignments;
+        long liveAssignments = assignedAssignments + acceptedAssignments
+                + pickedUpAssignments + inTransitAssignments;
 
         // ── Capacity snapshot ─────────────────────────────────────────────────
         double totalCapacity = allActivePartners.stream()
@@ -81,9 +81,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .cancelledOrders(cancelledOrders)
                 .liveAssignments(liveAssignments)
                 .assignedAssignments(assignedAssignments)
-                .enRouteToVendorAssignments(enRouteToVendorAssignments)
-                .collectedAssignments(collectedAssignments)
-                .enRouteToCustomerAssignments(enRouteToCustomerAssignments)
+                .acceptedAssignments(acceptedAssignments)
+                .pickedUpAssignments(pickedUpAssignments)
+                .inTransitAssignments(inTransitAssignments)
                 .totalSystemCapacityKg(totalCapacity)
                 .usedSystemCapacityKg(usedCapacity)
                 .freeSystemCapacityKg(totalCapacity - usedCapacity)
