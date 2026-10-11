@@ -72,8 +72,8 @@ public class RuleCacheService {
                 return Optional.of(rule);
             }
         } catch (Exception ex) {
-            log.warn("Redis read failed for rule key={}: {} — falling back to MySQL",
-                    key, ex.getMessage());
+            log.warn("Redis read failed for rule key={} — falling back to MySQL",
+                    key, ex);
         }
         log.debug("Cache MISS rule key={}", key);
         return Optional.empty();
@@ -89,8 +89,7 @@ public class RuleCacheService {
                     cacheKey, rule, Duration.ofSeconds(redisConfig.getRuleTtlSeconds()));
             log.debug("Cache PUT rule key={} ttl={}s", key, redisConfig.getRuleTtlSeconds());
         } catch (Exception ex) {
-            log.warn("Redis write failed for rule key={}: {}", key, ex.getMessage());
-        }
+            log.warn("Redis write failed for rule key={}", key, ex);        }
     }
 
     /**
@@ -122,8 +121,7 @@ public class RuleCacheService {
                 return Optional.of(config);
             }
         } catch (Exception ex) {
-            log.warn("Redis read failed for scoring factor={}: {} — falling back to MySQL",
-                    factor, ex.getMessage());
+            log.warn("Redis read failed for scoring factor={}", factor, ex);
         }
         log.debug("Cache MISS scoring factor={}", factor);
         return Optional.empty();

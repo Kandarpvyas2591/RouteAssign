@@ -1,0 +1,3782 @@
+{
+  "info": {
+    "_postman_id": "8df4e82b-1d15-4a85-9b12-7a0e8c2a2026",
+    "name": "RouteAssign - Public API Test Collection",
+    "description": "Public demo collection for the RouteAssign backend. Phase 1 creates test users and catalog/stock data; run it once against a disposable local database. Phase 2 creates orders and exercises assignment lifecycle/reassignment and read APIs. Configure baseUrl for your local server. Registration bodies use the collection variable testPassword, which is a demo-only value; change it for local testing if needed. This collection is provided as an example and has not been validated against every deployment or API configuration.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "PHASE 1 - ONE-TIME DATA INITIALIZATION (run once only)",
+      "description": "ONE-TIME SETUP: Creates users, resolves profile IDs, creates catalogue items, and initializes stock. Run once on a disposable development database.",
+      "item": [
+        {
+          "name": "00 - Health check (starts a fresh run tag)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Application health is UP\",function(){pm.expect(pm.response.code).to.eql(200);}); if (!pm.collectionVariables.get(\"runTag\")) { pm.collectionVariables.set(\"runTag\", String(Date.now())); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "01 - Read assignment rules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/assignment-rules"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Assignment rules endpoint responds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - Read scoring rules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/scoring-rules"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Scoring rules endpoint responds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.01 - Register delivery partner 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.partner1.{{runTag}}@example.com\",\n  \"username\": \"ra_partner_1_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000001\",\n  \"latitude\": 21.1702,\n  \"longitude\": 72.8311\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"partner1AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.01 - Resolve delivery partner profile 1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/auth/{{partner1AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"partner1Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.02 - Register delivery partner 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.partner2.{{runTag}}@example.com\",\n  \"username\": \"ra_partner_2_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000002\",\n  \"latitude\": 21.185,\n  \"longitude\": 72.81\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"partner2AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.02 - Resolve delivery partner profile 2",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/auth/{{partner2AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"partner2Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.03 - Register delivery partner 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.partner3.{{runTag}}@example.com\",\n  \"username\": \"ra_partner_3_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000003\",\n  \"latitude\": 21.15,\n  \"longitude\": 72.85\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"partner3AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.03 - Resolve delivery partner profile 3",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/auth/{{partner3AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"partner3Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.04 - Register delivery partner 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.partner4.{{runTag}}@example.com\",\n  \"username\": \"ra_partner_4_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000004\",\n  \"latitude\": 21.205,\n  \"longitude\": 72.82\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"partner4AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.04 - Resolve delivery partner profile 4",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/auth/{{partner4AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"partner4Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.05 - Register delivery partner 5",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.partner5.{{runTag}}@example.com\",\n  \"username\": \"ra_partner_5_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000005\",\n  \"latitude\": 21.13,\n  \"longitude\": 72.8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"partner5AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.05 - Resolve delivery partner profile 5",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/auth/{{partner5AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"partner5Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10.06 - Register delivery partner 6",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.partner6.{{runTag}}@example.com\",\n  \"username\": \"ra_partner_6_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"DELIVERY_PARTNER\",\n  \"mobileNo\": \"9100000006\",\n  \"latitude\": 21.175,\n  \"longitude\": 72.87\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"partner6AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11.06 - Resolve delivery partner profile 6",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/auth/{{partner6AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"partner6Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20.01 - Register vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.vendor1.{{runTag}}@example.com\",\n  \"username\": \"ra_vendor_1_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9200000001\",\n  \"latitude\": 21.1702,\n  \"longitude\": 72.8311\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"vendor1AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21.01 - Resolve vendor profile 1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/auth/{{vendor1AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"vendor1Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20.02 - Register vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.vendor2.{{runTag}}@example.com\",\n  \"username\": \"ra_vendor_2_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9200000002\",\n  \"latitude\": 21.19,\n  \"longitude\": 72.82\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"vendor2AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21.02 - Resolve vendor profile 2",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/auth/{{vendor2AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"vendor2Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "20.03 - Register vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.vendor3.{{runTag}}@example.com\",\n  \"username\": \"ra_vendor_3_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"VENDOR\",\n  \"mobileNo\": \"9200000003\",\n  \"latitude\": 21.145,\n  \"longitude\": 72.845\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"vendor3AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "21.03 - Resolve vendor profile 3",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/auth/{{vendor3AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"vendor3Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.01 - Register customer 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer1.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_1_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000001\",\n  \"latitude\": 21.163,\n  \"longitude\": 72.814\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer1AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.01 - Resolve customer profile 1",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer1AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer1Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.02 - Register customer 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer2.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_2_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000002\",\n  \"latitude\": 21.166,\n  \"longitude\": 72.818\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer2AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.02 - Resolve customer profile 2",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer2AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer2Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.03 - Register customer 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer3.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_3_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000003\",\n  \"latitude\": 21.169,\n  \"longitude\": 72.822\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer3AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.03 - Resolve customer profile 3",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer3AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer3Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.04 - Register customer 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer4.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_4_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000004\",\n  \"latitude\": 21.172,\n  \"longitude\": 72.826\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer4AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.04 - Resolve customer profile 4",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer4AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer4Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.05 - Register customer 5",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer5.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_5_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000005\",\n  \"latitude\": 21.175,\n  \"longitude\": 72.83\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer5AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.05 - Resolve customer profile 5",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer5AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer5Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.06 - Register customer 6",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer6.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_6_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000006\",\n  \"latitude\": 21.178,\n  \"longitude\": 72.834\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer6AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.06 - Resolve customer profile 6",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer6AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer6Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.07 - Register customer 7",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer7.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_7_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000007\",\n  \"latitude\": 21.181,\n  \"longitude\": 72.838\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer7AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.07 - Resolve customer profile 7",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer7AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer7Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "30.08 - Register customer 8",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ra.customer8.{{runTag}}@example.com\",\n  \"username\": \"ra_customer_8_{{runTag}}\",\n  \"password\": \"{{testPassword}}\",\n  \"role\": \"CUSTOMER\",\n  \"mobileNo\": \"9300000008\",\n  \"latitude\": 21.184,\n  \"longitude\": 72.842\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Registration succeeds\", function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+                  "const j=pm.response.json(); pm.test(\"Success envelope\",function(){pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"customer8AuthId\",j.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "31.08 - Resolve customer profile 8",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/customers/auth/{{customer8AuthId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Profile lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(j.data.id).to.be.a(\"number\");});",
+                  "pm.collectionVariables.set(\"customer8Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.01 - Create item 1: Rice 5kg",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rice 5kg {{runTag}}\",\n  \"price\": 450,\n  \"weight\": 5.0,\n  \"description\": \"Test staple\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item1Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.02 - Create item 2: Wheat Flour 2kg",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wheat Flour 2kg {{runTag}}\",\n  \"price\": 120,\n  \"weight\": 2.0,\n  \"description\": \"Test grocery\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item2Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.03 - Create item 3: Cooking Oil 1L",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cooking Oil 1L {{runTag}}\",\n  \"price\": 160,\n  \"weight\": 1.0,\n  \"description\": \"Test grocery\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item3Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.04 - Create item 4: Sugar 1kg",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sugar 1kg {{runTag}}\",\n  \"price\": 55,\n  \"weight\": 1.0,\n  \"description\": \"Test grocery\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item4Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.05 - Create item 5: Tea Pack",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tea Pack {{runTag}}\",\n  \"price\": 220,\n  \"weight\": 0.5,\n  \"description\": \"Test beverage\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item5Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.06 - Create item 6: Coffee Pack",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coffee Pack {{runTag}}\",\n  \"price\": 280,\n  \"weight\": 0.5,\n  \"description\": \"Test beverage\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item6Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.07 - Create item 7: Detergent 2kg",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Detergent 2kg {{runTag}}\",\n  \"price\": 190,\n  \"weight\": 2.0,\n  \"description\": \"Test household\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item7Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.08 - Create item 8: Soap Bundle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Soap Bundle {{runTag}}\",\n  \"price\": 100,\n  \"weight\": 1.0,\n  \"description\": \"Test household\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item8Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.09 - Create item 9: Biscuits Box",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Biscuits Box {{runTag}}\",\n  \"price\": 80,\n  \"weight\": 0.5,\n  \"description\": \"Test snacks\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item9Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.10 - Create item 10: Water Case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Water Case {{runTag}}\",\n  \"price\": 180,\n  \"weight\": 6.0,\n  \"description\": \"Test beverage\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item10Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.11 - Create item 11: Pet Food 3kg",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pet Food 3kg {{runTag}}\",\n  \"price\": 390,\n  \"weight\": 3.0,\n  \"description\": \"Test pet supply\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item11Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "40.12 - Create item 12: Paper Towels",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Paper Towels {{runTag}}\",\n  \"price\": 130,\n  \"weight\": 1.0,\n  \"description\": \"Test household\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Item created\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);});",
+                  "pm.collectionVariables.set(\"item12Id\",j.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.01 - Stock item 1 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item1Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.02 - Stock item 2 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item2Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.03 - Stock item 3 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item3Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.04 - Stock item 4 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item4Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.05 - Stock item 5 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item5Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.06 - Stock item 6 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item6Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.07 - Stock item 7 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item7Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.08 - Stock item 8 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item8Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.09 - Stock item 9 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item9Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.10 - Stock item 10 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item10Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.11 - Stock item 11 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item11Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.1.12 - Stock item 12 at vendor 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor1Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item12Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.01 - Stock item 1 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item1Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.02 - Stock item 2 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item2Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.03 - Stock item 3 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item3Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.04 - Stock item 4 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item4Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.05 - Stock item 5 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item5Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.06 - Stock item 6 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item6Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.07 - Stock item 7 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item7Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.08 - Stock item 8 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item8Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.09 - Stock item 9 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item9Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.10 - Stock item 10 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item10Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.11 - Stock item 11 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item11Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.2.12 - Stock item 12 at vendor 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor2Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item12Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.01 - Stock item 1 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item1Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.02 - Stock item 2 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item2Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.03 - Stock item 3 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item3Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.04 - Stock item 4 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item4Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.05 - Stock item 5 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item5Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.06 - Stock item 6 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item6Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.07 - Stock item 7 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item7Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.08 - Stock item 8 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item8Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.09 - Stock item 9 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item9Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.10 - Stock item 10 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item10Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.11 - Stock item 11 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item11Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "50.3.12 - Stock item 12 at vendor 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/vendors/{{vendor3Id}}/store",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{item12Id}}\",\n  \"quantity\": 200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Stock saved\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PHASE 2 - ORDERS, REASSIGNMENT, AND API VERIFICATION",
+      "description": "OPERATIONS: Places orders, exercises assignment lifecycle/reassignment, and verifies read APIs. Requires successful Phase 1.",
+      "item": [
+        {
+          "name": "60.01 - Place order 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer1Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.166,\n  \"deliveryLocationLongitude\": 72.81,\n  \"items\": [\n    {\n      \"itemId\": \"{{item1Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 1 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order1AssignmentId\",j.data.id); pm.collectionVariables.set(\"order1OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.02 - Place order 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer2Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.187,\n  \"deliveryLocationLongitude\": 72.825,\n  \"items\": [\n    {\n      \"itemId\": \"{{item2Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 2 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order2AssignmentId\",j.data.id); pm.collectionVariables.set(\"order2OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.03 - Place order 3",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer3Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.208,\n  \"deliveryLocationLongitude\": 72.84,\n  \"items\": [\n    {\n      \"itemId\": \"{{item3Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item4Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 3 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order3AssignmentId\",j.data.id); pm.collectionVariables.set(\"order3OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.04 - Place order 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer4Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.157,\n  \"deliveryLocationLongitude\": 72.855,\n  \"items\": [\n    {\n      \"itemId\": \"{{item4Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 4 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order4AssignmentId\",j.data.id); pm.collectionVariables.set(\"order4OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.05 - Place order 5",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer5Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.178,\n  \"deliveryLocationLongitude\": 72.795,\n  \"items\": [\n    {\n      \"itemId\": \"{{item5Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 5 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order5AssignmentId\",j.data.id); pm.collectionVariables.set(\"order5OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.06 - Place order 6",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer6Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.199,\n  \"deliveryLocationLongitude\": 72.81,\n  \"items\": [\n    {\n      \"itemId\": \"{{item6Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item7Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 6 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order6AssignmentId\",j.data.id); pm.collectionVariables.set(\"order6OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.07 - Place order 7",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer7Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.148,\n  \"deliveryLocationLongitude\": 72.825,\n  \"items\": [\n    {\n      \"itemId\": \"{{item7Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 7 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order7AssignmentId\",j.data.id); pm.collectionVariables.set(\"order7OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.08 - Place order 8",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer8Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.169,\n  \"deliveryLocationLongitude\": 72.84,\n  \"items\": [\n    {\n      \"itemId\": \"{{item8Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 8 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order8AssignmentId\",j.data.id); pm.collectionVariables.set(\"order8OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.09 - Place order 9",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer1Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.19,\n  \"deliveryLocationLongitude\": 72.855,\n  \"items\": [\n    {\n      \"itemId\": \"{{item9Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item10Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 9 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order9AssignmentId\",j.data.id); pm.collectionVariables.set(\"order9OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.10 - Place order 10",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer2Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.211,\n  \"deliveryLocationLongitude\": 72.795,\n  \"items\": [\n    {\n      \"itemId\": \"{{item10Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 10 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order10AssignmentId\",j.data.id); pm.collectionVariables.set(\"order10OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.11 - Place order 11",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer3Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.16,\n  \"deliveryLocationLongitude\": 72.81,\n  \"items\": [\n    {\n      \"itemId\": \"{{item11Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 11 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order11AssignmentId\",j.data.id); pm.collectionVariables.set(\"order11OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.12 - Place order 12",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer4Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.181,\n  \"deliveryLocationLongitude\": 72.825,\n  \"items\": [\n    {\n      \"itemId\": \"{{item12Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item1Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 12 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order12AssignmentId\",j.data.id); pm.collectionVariables.set(\"order12OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.13 - Place order 13",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer5Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.202,\n  \"deliveryLocationLongitude\": 72.84,\n  \"items\": [\n    {\n      \"itemId\": \"{{item1Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 13 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order13AssignmentId\",j.data.id); pm.collectionVariables.set(\"order13OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.14 - Place order 14",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer6Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.151,\n  \"deliveryLocationLongitude\": 72.855,\n  \"items\": [\n    {\n      \"itemId\": \"{{item2Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 14 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order14AssignmentId\",j.data.id); pm.collectionVariables.set(\"order14OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.15 - Place order 15",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer7Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.172,\n  \"deliveryLocationLongitude\": 72.795,\n  \"items\": [\n    {\n      \"itemId\": \"{{item3Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item4Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 15 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order15AssignmentId\",j.data.id); pm.collectionVariables.set(\"order15OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.16 - Place order 16",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer8Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.193,\n  \"deliveryLocationLongitude\": 72.81,\n  \"items\": [\n    {\n      \"itemId\": \"{{item4Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 16 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order16AssignmentId\",j.data.id); pm.collectionVariables.set(\"order16OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.17 - Place order 17",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer1Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.214,\n  \"deliveryLocationLongitude\": 72.825,\n  \"items\": [\n    {\n      \"itemId\": \"{{item5Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 17 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order17AssignmentId\",j.data.id); pm.collectionVariables.set(\"order17OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.18 - Place order 18",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer2Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.163,\n  \"deliveryLocationLongitude\": 72.84,\n  \"items\": [\n    {\n      \"itemId\": \"{{item6Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item7Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 18 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order18AssignmentId\",j.data.id); pm.collectionVariables.set(\"order18OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.19 - Place order 19",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer3Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.184,\n  \"deliveryLocationLongitude\": 72.855,\n  \"items\": [\n    {\n      \"itemId\": \"{{item7Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 19 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order19AssignmentId\",j.data.id); pm.collectionVariables.set(\"order19OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.20 - Place order 20",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer4Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.205,\n  \"deliveryLocationLongitude\": 72.795,\n  \"items\": [\n    {\n      \"itemId\": \"{{item8Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 20 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order20AssignmentId\",j.data.id); pm.collectionVariables.set(\"order20OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.21 - Place order 21",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer5Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.154,\n  \"deliveryLocationLongitude\": 72.81,\n  \"items\": [\n    {\n      \"itemId\": \"{{item9Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item10Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 21 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order21AssignmentId\",j.data.id); pm.collectionVariables.set(\"order21OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.22 - Place order 22",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer6Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor1Id}}\",\n  \"deliveryLocationLatitude\": 21.175,\n  \"deliveryLocationLongitude\": 72.825,\n  \"items\": [\n    {\n      \"itemId\": \"{{item10Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 22 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order22AssignmentId\",j.data.id); pm.collectionVariables.set(\"order22OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.23 - Place order 23",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer7Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor2Id}}\",\n  \"deliveryLocationLatitude\": 21.196,\n  \"deliveryLocationLongitude\": 72.84,\n  \"items\": [\n    {\n      \"itemId\": \"{{item11Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 23 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order23AssignmentId\",j.data.id); pm.collectionVariables.set(\"order23OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "60.24 - Place order 24",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?customerId={{customer8Id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendorId\": \"{{vendor3Id}}\",\n  \"deliveryLocationLatitude\": 21.145,\n  \"deliveryLocationLongitude\": 72.855,\n  \"items\": [\n    {\n      \"itemId\": \"{{item12Id}}\",\n      \"quantity\": 1\n    },\n    {\n      \"itemId\": \"{{item1Id}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Places an order and invokes auto-assignment. If it fails, inspect the API response and assignment eligibility/configuration."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json(); pm.test(\"Order 24 assigned\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201]);pm.expect(j.success).to.eql(true);pm.expect(j.data.id).to.exist;pm.expect(j.data.orderId).to.exist;});",
+                  "pm.collectionVariables.set(\"order24AssignmentId\",j.data.id); pm.collectionVariables.set(\"order24OrderId\",j.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "70.1 - Order 1 status → ACCEPTED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/assignments/{{order1AssignmentId}}/status?newStatus=ACCEPTED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Transition to ACCEPTED\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "70.2 - Order 1 status → PICKED_UP",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/assignments/{{order1AssignmentId}}/status?newStatus=PICKED_UP"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Transition to PICKED_UP\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "70.3 - Order 1 status → IN_TRANSIT",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/assignments/{{order1AssignmentId}}/status?newStatus=IN_TRANSIT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Transition to IN_TRANSIT\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "70.4 - Order 1 status → DELIVERED",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/api/assignments/{{order1AssignmentId}}/status?newStatus=DELIVERED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Transition to DELIVERED\",function(){pm.expect(pm.response.code).to.eql(200);pm.expect(pm.response.json().success).to.eql(true);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "71 - Reassign order 2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/assignments/{{order2AssignmentId}}/reassign?reason=Postman%20end-to-end%20test",
+            "description": "422 may mean no alternative eligible partner exists; inspect response body."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Reassignment endpoint handled request\",function(){pm.expect(pm.response.code).to.be.oneOf([200,201,422]);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "72 - Read all orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Orders query succeeds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "73 - Read all assignments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assignments"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Assignments query succeeds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "74 - Read delivery partners",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/delivery-partners"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Partners query succeeds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "75 - Read leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/leaderboard?limit=20"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Leaderboard query succeeds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "76 - Read dashboard stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/dashboard/stats"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Dashboard query succeeds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "77 - Verify order 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders/{{order1OrderId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Order lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "78 - Verify assignment for order 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/assignments/order/{{order1OrderId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Assignment lookup succeeds\",function(){pm.expect(pm.response.code).to.eql(200);});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "runTag",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "DemoOnly#2026",
+      "type": "string",
+      "description": "Public demo-only password for local test users. Change before running against your own environment."
+    }
+  ]
+}
